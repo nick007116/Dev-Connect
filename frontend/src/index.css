@@ -1,0 +1,75 @@
+/* src/index.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.custom-chat-bg {
+    background-color: #bbd6fd98;
+  }
+  .tool-button {
+    @apply p-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 transition-colors duration-200;
+  }
+  .bg-grid-pattern {
+    background-size: 20px 20px;
+    background-image: 
+      linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+  }
+  .diagram-container svg {
+    max-width: 100%;
+    height: auto;
+  }
+  @keyframes fade-in {
+    from { 
+      opacity: 0; 
+      transform: translateY(4px); 
+    }
+    to { 
+      opacity: 1; 
+      transform: translateY(0); 
+    }
+  }
+  
+  .animate-fade-in {
+    animation: fade-in 0.15s ease-out;
+  }
+  @keyframes spin-reverse {
+    to {
+      transform: rotate(-360deg);
+    }
+  }
+  
+  @keyframes spin-slow {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  
+  .animate-spin-reverse {
+    animation: spin-reverse 3s linear infinite;
+  }
+  
+  .animate-spin-slow {
+    animation: spin 4s linear infinite;
+  }
+/* Image Cropper Styles */
+.reactEasyCrop_Container {
+  @apply relative w-full h-full overflow-hidden bg-gray-100 rounded-2xl;
+}
+
+.reactEasyCrop_Image,
+.reactEasyCrop_Video {
+  @apply max-w-full max-h-full m-auto absolute inset-0;
+}
+
+.reactEasyCrop_CropArea {
+  @apply absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2;
+  border: 2px solid theme('colors.white');
+  box-shadow: 0 0 0 9999em rgba(0, 0, 0, 0.5);
+  @apply rounded-full;
+}
+
+/* Scrollbar Styles */
+.scrollbar-custom {
+  @apply scrollbar-thin scrollbar-track-transparent scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400;
+}
