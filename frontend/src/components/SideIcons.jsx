@@ -1,12 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import { MessageCircle, Code, Menu, X } from 'lucide-react';
+import { MessageCircle, Code, Menu, X, Sparkles, Monitor } from 'lucide-react';
 import { getAuth, signOut } from "firebase/auth";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import Loader from './Diagrams/pages/Loader';
 
-const SideIcons = ({ activeTab, setActiveTab, showMenu, setShowMenu, userData, onLogout }) => {
+const SideIcons = ({ activeTab, setActiveTab, showMenu, setShowMenu, userData, onLogout, isChatOpen }) => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [loadingType, setLoadingType] = useState(null);
   const navigate = useNavigate();
+  const location = useLocation();
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const currentPath = location.pathname; // Extract current path
+  
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    handleResize();
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -27,9 +46,7 @@ const SideIcons = ({ activeTab, setActiveTab, showMenu, setShowMenu, userData, o
     
     try {
       await signOut(auth);
-      // First navigate to logout page to show animation
       navigate('/logout');
-      // Then trigger the app-level logout after a delay
       setTimeout(() => {
         onLogout();
       }, 3000);
@@ -41,69 +58,191 @@ const SideIcons = ({ activeTab, setActiveTab, showMenu, setShowMenu, userData, o
 
   const handleNavigation = (tab) => {
     setActiveTab(tab);
+    setShowMenu(false); // Close menu after navigation on mobile
+    
+    // Set loading state with appropriate type
+    setLoading(true);
+    
     if (tab === 'chat') {
+      setLoadingType('chat');
       navigate('/chat');
     } else if (tab === 'code') {
+      setLoadingType('diagrams');
       navigate('/diagrams');
+    } else if (tab === 'project-kickstarter') {
+      setLoadingType('ai-project');
+      navigate('/project-ai');
+    } else if (tab === 'remote-desktop') {
+      setLoadingType('remote-desktop');
+      navigate('/remote-desktop');
     }
+    
+    // Hide loader after 1 second or when page loads
+    setTimeout(() => {
+      setLoading(false);
+    }, 800); // Changed to 1 second as requested
   };
 
+  const handleProfileClick = () => {
+    navigate('/profile');
+    setShowProfileMenu(false);
+  };
+
+  // Don't show bottom nav when chat is open on mobile
+  const shouldShowMobileNav = !isChatOpen;
+
+  // Don't show profile in personal chat view or in project AI view
+  const shouldShowProfile = !isChatOpen && currentPath !== '/project-ai';
+  
   return (
-    <div className={`fixed top-0 left-0 flex flex-col items-center p-4 border-r border-gray-300 h-screen bg-gradient-to-r from-gray-50 to-gray-100 transition-all duration-300 ${showMenu ? 'w-64' : 'w-20'} rounded-r-lg`}>
-      <button
-        onClick={() => setShowMenu(!showMenu)}
-        className="p-2 rounded-lg transition-colors duration-300 hover:bg-gray-200 mb-8 self-start"
-      >
-        {showMenu ? <X className="w-6 h-6 text-gray-700" /> : <Menu className="w-6 h-6 text-gray-700" />}
-      </button>
+    <>
+      {loading && <Loader type={loadingType} />}
       
-      <div className="flex flex-col items-center space-y-6 mt-4 w-full">
-        <button
-          onClick={() => handleNavigation('chat')}
-          className={`flex items-center p-3 rounded-lg transition-colors duration-300 w-full ${activeTab === 'chat' ? 'bg-blue-100' : 'hover:bg-gray-100'}`}
-        >
-          <MessageCircle className={`w-6 h-6 text-blue-600 ${!showMenu && 'mx-auto'}`} />
-          {showMenu && <span className="ml-4 text-lg">Chat</span>}
-        </button>
-        <button
-          onClick={() => handleNavigation('code')}
-          className={`flex items-center p-3 rounded-lg transition-colors duration-300 w-full ${activeTab === 'code' ? 'bg-green-100' : 'hover:bg-gray-100'}`}
-        >
-          <Code className={`w-6 h-6 text-green-600 ${!showMenu && 'mx-auto'}`} />
-          {showMenu && <span className="ml-4 text-lg">Diagrams</span>}
-        </button>
-      </div>
+      {/* Mobile Nav Bar (Bottom) - With fixed-size items */}
+      {shouldShowMobileNav && (
+        <div className="fixed bottom-0 left-0 right-0 md:hidden bg-white border-t border-gray-200 z-40 shadow-md">
+          <div className="flex justify-around items-center py-2 px-2">
+            {/* Chat */}
+            <button
+              onClick={() => handleNavigation('chat')}
+              className="flex flex-col items-center justify-center p-2 w-[72px] h-[68px]"
+            >
+              <div className={`flex items-center justify-center w-10 h-10 rounded-md ${activeTab === 'chat' ? 'bg-blue-100' : ''}`}>
+                <MessageCircle className={`w-6 h-6 ${activeTab === 'chat' ? 'text-blue-600' : 'text-gray-500'}`} />
+              </div>
+              <span className={`text-xs mt-1 ${activeTab === 'chat' ? 'text-blue-600 font-medium' : 'text-gray-500'}`}>Chat</span>
+            </button>
+            
+            {/* Diagrams */}
+            <button
+              onClick={() => handleNavigation('code')}
+              className="flex flex-col items-center justify-center p-2 w-[72px] h-[68px]"
+            >
+              <div className={`flex items-center justify-center w-10 h-10 rounded-md ${activeTab === 'code' ? 'bg-green-100' : ''}`}>
+                <Code className={`w-6 h-6 ${activeTab === 'code' ? 'text-green-600' : 'text-gray-500'}`} />
+              </div>
+              <span className={`text-xs mt-1 ${activeTab === 'code' ? 'text-green-600 font-medium' : 'text-gray-500'}`}>Diagrams</span>
+            </button>
+            
+            {/* Projects - Mobile Nav */}
+            <button
+              onClick={() => handleNavigation('project-kickstarter')}
+              className="flex flex-col items-center justify-center p-2 w-[72px] h-[68px]"
+            >
+              <div className={`flex items-center justify-center w-10 h-10 rounded-md ${activeTab === 'project-kickstarter' ? 'bg-purple-100' : ''}`}>
+                <Sparkles className={`w-6 h-6 ${activeTab === 'project-kickstarter' ? 'text-purple-600' : 'text-gray-500'}`} />
+              </div>
+              <span className={`text-xs mt-1 ${activeTab === 'project-kickstarter' ? 'text-purple-600 font-medium' : 'text-gray-500'}`}>AI Studio</span>
+            </button>
+            
+            {/* Desktop */}
+            <button
+              onClick={() => handleNavigation('remote-desktop')}
+              className="flex flex-col items-center justify-center p-2 w-[72px] h-[68px]"
+            >
+              <div className={`flex items-center justify-center w-10 h-10 rounded-md ${activeTab === 'remote-desktop' ? 'bg-emerald-100' : ''}`}>
+                <Monitor className={`w-6 h-6 ${activeTab === 'remote-desktop' ? 'text-emerald-600' : 'text-gray-500'}`} />
+              </div>
+              <span className={`text-xs mt-1 ${activeTab === 'remote-desktop' ? 'text-emerald-600 font-medium' : 'text-gray-500'}`}>Desktop</span>
+            </button>
+          </div>
+        </div>
+      )}
 
-      <div className="mt-auto w-full">
-        {userData && (
+      {/* Mobile Profile Button (Top Right) */}
+      {shouldShowProfile && userData && currentPath !== '/project-ai' && (
+        <button
+          onClick={handleProfileClick}
+          className={`fixed top-9 right-4 z-50 md:hidden bg-white rounded-2xl shadow-md overflow-hidden transition-all duration-300 ${loading ? 'blur-sm opacity-70' : ''}`}
+        >
+          <img
+            src={userData.profilePic}
+            alt="Profile"
+            className="w-12 h-12 object-cover"
+          />
+        </button>
+      )}
+
+      {/* Overlay for mobile */}
+      {showMenu && isMobile && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-50 md:hidden"
+          onClick={() => setShowMenu(false)}
+        />
+      )}
+      
+      {/* Desktop Sidebar - Hidden on mobile */}
+      <div className={`fixed top-0 left-0 md:flex hidden flex-col items-center p-4 border-r border-gray-300 h-screen bg-gradient-to-r from-gray-50 to-gray-100 transition-all duration-300 ${showMenu ? 'w-64' : 'w-20'} rounded-r-lg z-[60]`}>
+        <button
+          onClick={() => setShowMenu(!showMenu)}
+          className="p-2 rounded-lg transition-colors duration-300 hover:bg-gray-200 mb-8 self-start"
+        >
+          {showMenu ? <X className="w-6 h-6 text-gray-700" /> : <Menu className="w-6 h-6 text-gray-700" />}
+        </button>
+        
+        <div className="flex flex-col items-center space-y-6 mt-4 w-full">
           <button
-            onClick={() => setShowProfileMenu(!showProfileMenu)}
-            className={`flex items-center p-2 rounded-lg transition-colors duration-300 hover:bg-gray-100 w-full ${!showMenu && 'justify-center'}`}
+            onClick={() => handleNavigation('chat')}
+            className={`flex items-center p-3 rounded-lg transition-colors duration-300 w-full ${activeTab === 'chat' ? 'bg-blue-100' : 'hover:bg-gray-100'}`}
           >
-            <img
-              src={userData.profilePic}
-              alt="Profile"
-              className="w-8 h-8 rounded-full object-cover flex-shrink-0"
-            />
-            {showMenu && <span className="ml-4 text-lg">Profile</span>}
+            <MessageCircle className={`w-6 h-6 text-blue-600 ${!showMenu && 'mx-auto'}`} />
+            {showMenu && <span className="ml-4 text-lg">Chat</span>}
           </button>
-        )}
+          <button
+            onClick={() => handleNavigation('code')}
+            className={`flex items-center p-3 rounded-lg transition-colors duration-300 w-full ${activeTab === 'code' ? 'bg-green-100' : 'hover:bg-gray-100'}`}
+          >
+            <Code className={`w-6 h-6 text-green-600 ${!showMenu && 'mx-auto'}`} />
+            {showMenu && <span className="ml-4 text-lg">Diagrams</span>}
+          </button>
+          <button
+            onClick={() => handleNavigation('project-kickstarter')}
+            className={`flex items-center p-3 rounded-lg transition-colors duration-300 w-full ${activeTab === 'project-kickstarter' ? 'bg-purple-100' : 'hover:bg-gray-100'}`}
+          >
+            <Sparkles className={`w-6 h-6 text-purple-600 ${!showMenu && 'mx-auto'}`} />
+            {showMenu && <span className="ml-4 text-lg">AI Project Studio</span>}
+          </button>
+          <button
+            onClick={() => handleNavigation('remote-desktop')}
+            className={`flex items-center p-3 rounded-lg transition-colors duration-300 w-full ${activeTab === 'remote-desktop' ? 'bg-emerald-100' : 'hover:bg-gray-100'}`}
+          >
+            <Monitor className={`w-6 h-6 text-emerald-600 ${!showMenu && 'mx-auto'}`} />
+            {showMenu && <span className="ml-4 text-lg">Remote Desktop</span>}
+          </button>
+        </div>
+
+        <div className="mt-auto w-full">
+          {userData && (
+            <button
+              onClick={handleProfileClick}
+              className={`flex items-center p-2 rounded-lg transition-all duration-300 hover:bg-gray-100 w-full ${!showMenu && 'justify-center'} ${loading ? 'blur-sm opacity-70' : ''}`}
+            >
+              <img
+                src={userData.profilePic}
+                alt="Profile"
+                className="w-8 h-8 rounded-md object-cover flex-shrink-0"
+              />
+              {showMenu && <span className="ml-4 text-lg">Profile</span>}
+            </button>
+          )}
+        </div>
       </div>
 
+      {/* Profile Menu */}
       {showProfileMenu && userData && (
-        <div className="absolute bottom-16 left-4 bg-white shadow-lg rounded-lg p-4 profile-menu z-50" style={{ width: '300px' }}>
+        <div className={`bg-white shadow-md rounded-md p-4 profile-menu z-50 ${isMobile ? 'fixed top-16 right-4' : 'absolute bottom-16 left-4'}`} style={{ width: '300px' }}>
           <div className="flex items-center gap-4">
             <img
               src={userData.profilePic}
               alt="Profile"
-              className="w-12 h-12 rounded-full object-cover flex-shrink-0"
+              className="w-12 h-12 rounded-md object-cover flex-shrink-0"
             />
             <div className="flex-1">
               <h3 className="text-lg font-semibold">{userData.name}</h3>
               <p className="text-sm text-gray-500">{userData.bio}</p>
               <button
                 onClick={handleLogout}
-                className="mt-2 w-full px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors duration-300"
+                className="mt-2 w-full px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-colors duration-300"
                 disabled={isLoggingOut}
               >
                 {isLoggingOut ? (
@@ -116,7 +255,7 @@ const SideIcons = ({ activeTab, setActiveTab, showMenu, setShowMenu, userData, o
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
 

@@ -1,4 +1,5 @@
-// filepath: /n:/MajorProjects/devconnect/backend/server.js
+require('dotenv').config();
+
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -6,14 +7,28 @@ const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
-const { initializeFirebaseAdmin } = require('./services/firebaseService'); // Import initializeFirebaseAdmin
+const { initializeFirebaseAdmin, getFirestore } = require('./services/firebaseService');
 const { verifyToken } = require('./middlewares/authMiddleware');
 const { handleSocketConnection } = require('./utils/socketUtils');
 const apiRoutes = require('./routes/apiRoutes');
 const errorMiddleware = require('./middlewares/errorMiddleware');
 
-// Initialize Firebase Admin SDK
+// Initialize Firebase Admin
 initializeFirebaseAdmin();
+
+// Test Firestore connection
+(async () => {
+  try {
+    const db = getFirestore();
+    const testDoc = await db.collection('test').doc('connection').set({
+      timestamp: new Date(),
+      status: 'connected'
+    });
+    console.log('Firestore connection test successful');
+  } catch (error) {
+    console.error('Firestore connection test failed:', error.message);
+  }
+})();
 
 const app = express();
 const server = http.createServer(app);

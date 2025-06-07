@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup } from "firebase/auth";
-import { getFirestore, doc, getDoc, setDoc, collection, addDoc, query, onSnapshot, orderBy, where, getDocs, updateDoc, limit, startAfter, serverTimestamp } from "firebase/firestore";
+import { getFirestore, doc, getDoc, setDoc, collection, addDoc, query, onSnapshot, orderBy, where, getDocs, updateDoc, limit, startAfter, serverTimestamp, deleteDoc } from "firebase/firestore";
 import { getDatabase, ref, onValue, set, onDisconnect, remove } from "firebase/database"; // Import Realtime Database functions
 
 const firebaseConfig = {
@@ -18,4 +18,4 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const rtdb = getDatabase(app); // Get Realtime Database instance
 
-export { auth, db, rtdb, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, doc, getDoc, setDoc, collection, addDoc, query, onSnapshot, orderBy, where, getDocs, updateDoc, limit, startAfter, serverTimestamp, ref, onValue, set, onDisconnect, remove };
+export { auth, db, rtdb, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, doc, getDoc, setDoc, collection, addDoc, query, onSnapshot, orderBy, where, getDocs, updateDoc, limit, startAfter, serverTimestamp, deleteDoc, ref, onValue, set, onDisconnect, remove };

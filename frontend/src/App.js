@@ -8,9 +8,13 @@ import DiagramEditor from "./components/Diagrams/Diagram/MermaidDiagram";
 import LogOut from "./components/LogOut";
 import LandingPage from "./components/LandingPage";
 import MainLoader from "./components/MainLoader";
+import ProjectKickstarter from "./components/AIProjectKickstarter/ProjectKickstarter";
+import RemoteDesktopShare from "./components/RemoteDesktop/RemoteDesktopShare";
+import SmartLearningHub from "./components/LearningHub/SmartLearningHub";
 import { useNavigate } from 'react-router-dom';
 import { auth, onAuthStateChanged, doc, getDoc, db } from './lib/firebase';
 import { AnimatePresence, motion } from 'framer-motion';
+import Profile from "./components/Profile"; // Import the Profile component
 
 const App = () => {
   const [user, setUser] = useState(null);
@@ -19,12 +23,12 @@ const App = () => {
   const [loading, setLoading] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 1000);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [isChatOpen, setIsChatOpen] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(window.innerWidth < 1000);
+      setIsMobile(window.innerWidth < 768);
     };
 
     window.addEventListener("resize", handleResize);
@@ -68,6 +72,9 @@ const App = () => {
   const determineActiveTab = (pathname) => {
     if (pathname === '/chat') return 'chat';
     if (pathname === '/diagrams') return 'code';
+    if (pathname === '/project-ai') return 'project-kickstarter';
+    if (pathname === '/remote-desktop') return 'remote-desktop';
+    if (pathname === '/learning-hub') return 'learning-hub';
     return 'chat';
   };
 
@@ -75,7 +82,8 @@ const App = () => {
     navigate('/logout');
   };
 
-  const shouldShowSideIcons = user && !isEditorRoute && !isLogoutRoute && !(isMobile && isChatOpen);
+  // Show sidebar except on editor and logout routes
+  const shouldShowSideIcons = user && !isEditorRoute && !isLogoutRoute;
 
   if (loading) {
     return <MainLoader onLoadingComplete={() => setLoading(false)} />;
@@ -84,27 +92,20 @@ const App = () => {
   return (
     <div className="relative flex h-screen bg-gradient-to-br from-rose-50 via-purple-50 to-blue-50">
       {shouldShowSideIcons && (
-        <motion.div 
-          className="fixed left-0 top-0 h-full z-20 bg-white shadow-lg"
-          initial={{ x: -100, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          exit={{ x: -100, opacity: 0 }}
-          transition={{ type: "spring", stiffness: 260, damping: 20 }}
-        >
-          <SideIcons
-            activeTab={determineActiveTab(location.pathname)}
-            setActiveTab={() => {}}
-            showMenu={showMenu}
-            setShowMenu={setShowMenu}
-            userData={userData}
-            onLogout={handleLogout}
-          />
-        </motion.div>
+        <SideIcons
+          activeTab={determineActiveTab(location.pathname)}
+          setActiveTab={() => {}} // Remove setActiveTab since we're not using it
+          showMenu={showMenu}
+          setShowMenu={setShowMenu}
+          userData={userData}
+          onLogout={handleLogout}
+          isChatOpen={isChatOpen}
+        />
       )}
 
       <motion.div 
-        className="flex-1 h-full"
-        style={{ marginLeft: shouldShowSideIcons ? '64px' : '0' }}
+        className="flex-1 h-full pb-16 md:pb-0"
+        style={{ marginLeft: shouldShowSideIcons && !isMobile ? '80px' : '0' }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -122,6 +123,9 @@ const App = () => {
               <Route path="/" element={<Navigate to="/chat" replace />} />
               <Route path="/chat" element={<HomePage user={user} userData={userData} isChatOpen={isChatOpen} setIsChatOpen={setIsChatOpen} />} />
               <Route path="/diagrams" element={<Home />} />
+              <Route path="/project-ai" element={<ProjectKickstarter user={user} setShowMenu={setShowMenu} />} /> {/* Updated route */}
+              <Route path="/remote-desktop" element={<RemoteDesktopShare user={user} />} />
+              <Route path="/learning-hub" element={<SmartLearningHub user={user} />} />
               <Route path="/editor/:id" element={<DiagramEditor currentUser={user} />} />
               <Route path="/logout" element={
                 <LogOut 
@@ -132,6 +136,7 @@ const App = () => {
                   }} 
                 />
               } />
+              <Route path="/profile" element={<Profile userData={userData} onLogout={handleLogout} />} />
               <Route path="*" element={<Navigate to="/chat" replace />} />
             </Routes>
           )}

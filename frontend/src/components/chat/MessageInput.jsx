@@ -68,7 +68,7 @@ const MessageInput = ({
   };
 
   return (
-    <div className="sticky bottom-0 w-full px-4 py-3 bg-white/95 border-t border-gray-100 backdrop-blur-md">
+    <div className="sticky bottom-0 w-full px-4 py-3 bg-white/95 border-t border-gray-100 backdrop-blur-md shadow-lg">
       <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
         <div className="relative">
           <textarea

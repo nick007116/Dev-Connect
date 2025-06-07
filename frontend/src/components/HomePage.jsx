@@ -217,41 +217,43 @@ const HomePage = ({ user, userData, isChatOpen, setIsChatOpen }) => {
         ${(isChatOpen && isMobile) ? "hidden" : "flex"}
         w-full md:w-[380px] relative z-10`}
       >
-        {/* Modern Header */}
-        <div className="p-8 border-b border-indigo-100/50">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-500 shadow-lg">
-                <MessageSquare className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                  Messages
-                  {unreadChatsCount > 0 && (
-                    <span className="ml-2 px-2.5 py-1 bg-red-500 text-white rounded-full text-xs font-medium">
-                      {unreadChatsCount > 99 ? "99+" : unreadChatsCount}
-                    </span>
-                  )}
-                </h1>
-                <p className="text-indigo-600/60 text-sm mt-1">Welcome back, {userData?.name}</p>
+        {/* Modern Header - Now Fixed */}
+        <div className="sticky top-0 z-20 bg-white/90 backdrop-blur-xl border-b border-indigo-100/50">
+          <div className="p-8">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-500 shadow-lg">
+                  <MessageSquare className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                    Messages
+                    {unreadChatsCount > 0 && (
+                      <span className="ml-2 px-2.5 py-1 bg-red-500 text-white rounded-full text-xs font-medium">
+                        {unreadChatsCount > 99 ? "99+" : unreadChatsCount}
+                      </span>
+                    )}
+                  </h1>
+                  <p className="text-indigo-600/60 text-sm mt-1">Welcome back, {userData?.name}</p>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Enhanced Search */}
-          <div className="relative">
-          <Search className="w-5 h-5 text-indigo-400 absolute left-4 top-4" />
-            <input
-              type="text"
-              placeholder="Search Users..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 pr-4 py-4 bg-white rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-400/30 transition-all border border-indigo-100 placeholder-indigo-300 shadow-sm"
-            />
+            {/* Enhanced Search */}
+            <div className="relative">
+              <Search className="w-5 h-5 text-indigo-400 absolute left-4 top-4" />
+              <input
+                type="text"
+                placeholder="Search Users..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-12 pr-4 py-4 bg-white rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-400/30 transition-all border border-indigo-100 placeholder-indigo-300 shadow-sm"
+              />
+            </div>
           </div>
         </div>
 
-        {/* Enhanced Chat List */}
+        {/* Enhanced Chat List - Scrollable */}
         <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-indigo-200 scrollbar-track-transparent hover:scrollbar-thumb-indigo-300">
           {loading ? (
             <div className="flex flex-col items-center justify-center h-full">
@@ -262,7 +264,7 @@ const HomePage = ({ user, userData, isChatOpen, setIsChatOpen }) => {
               <p className="mt-4 text-indigo-600 font-medium">Loading conversations...</p>
             </div>
           ) : (
-            <div className="space-y-4 p-4 flex flex-col ml-4">
+            <div className="space-y-4 p-4 flex flex-col">
               {searchTerm ? (
                 <UserSearch
                   currentUser={user}
@@ -286,11 +288,8 @@ const HomePage = ({ user, userData, isChatOpen, setIsChatOpen }) => {
                       <img
                         src={chat.profilePic}
                         alt={chat.name}
-                        className="w-14 h-14 rounded-2xl object-cover ring-2 ring-white shadow-md group-hover:shadow-lg transition-all"
+                        className="w-14 h-14 rounded-2xl object-cover shadow-md group-hover:shadow-lg transition-all"
                       />
-                      {chat.online && (
-                        <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-lg ring-2 ring-white"></div>
-                      )}
                     </div>
                     <div className="ml-4 flex-1 flex justify-between items-start">
                       <div>
@@ -301,12 +300,12 @@ const HomePage = ({ user, userData, isChatOpen, setIsChatOpen }) => {
                           className={`text-sm mt-1 flex items-center gap-1.5 ${
                             chat.online
                               ? "text-emerald-600 font-medium"
-                              : "text-indigo-400"
+                              : "text-gray-500"
                           }`}
                         >
                           <span
                             className={`w-2 h-2 rounded-full ${
-                              chat.online ? "bg-emerald-500" : "bg-indigo-300"
+                              chat.online ? "bg-emerald-500" : "bg-gray-300"
                             }`}
                           ></span>
                           {chat.online ? "Online" : "Offline"}
