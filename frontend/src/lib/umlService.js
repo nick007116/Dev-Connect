@@ -8,7 +8,7 @@ class UMLService {
       throw new Error('API key for Google Generative AI is not defined');
     }
     this.genAI = new GoogleGenerativeAI(apiKey);
-    this.model = this.genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+    this.model = this.genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
   }
 
   async generateDiagramPrompt(type, description) {
