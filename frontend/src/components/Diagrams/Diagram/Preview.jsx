@@ -70,7 +70,17 @@ const Preview = ({ svgOutput, zoom, onZoom }) => {
             cursor: isDragging ? 'grabbing' : 'grab'
           }}
         >
-          <div dangerouslySetInnerHTML={{ __html: svgOutput }} />
+          <div 
+            className="svg-container" 
+            style={{
+              maxWidth: '100%',
+              maxHeight: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+            dangerouslySetInnerHTML={{ __html: svgOutput }} 
+          />
         </div>
       </div>
 

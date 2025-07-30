@@ -1,61 +1,119 @@
 import React, { useState, useEffect } from 'react';
 import { DIAGRAM_TYPES } from '../constants/diagramTemplates';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../../../lib/firebase';
 import { collection, addDoc, serverTimestamp, query, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
 import { useAuth } from '../../../hooks/useAuth';
 import ProjectCard from './ProjectCard';
 import { useNavigate } from 'react-router-dom';
 import Loader from './Loader';
-import { Code, Plus } from 'lucide-react';
+import { Code, Plus, X } from 'lucide-react';
 
 const NewProjectModal = ({ isOpen, onClose, onCreate }) => {
   const [title, setTitle] = useState('');
   const [type, setType] = useState('flowchart');
 
+  const handleCreate = () => {
+    if (title.trim()) {
+      onCreate({ title: title.trim(), type });
+      setTitle('');
+      setType('flowchart');
+    }
+  };
+
   return (
-    <motion.div 
-      className={`fixed inset-0 z-50 ${isOpen ? 'block' : 'hidden'}`}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-    >
-      <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-lg p-8 w-11/12 max-w-md">
-        <h2 className="text-2xl font-semibold mb-6 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Create New Project</h2>
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Project Title"
-          className="w-full p-3 border border-indigo-100 rounded-xl mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-        />
-        <select
-          value={type}
-          onChange={(e) => setType(e.target.value)}
-          className="w-full p-3 border border-indigo-100 rounded-xl mb-6 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
         >
-          {DIAGRAM_TYPES.map((type) => (
-            <option key={type.value} value={type.value}>
-              {type.label}
-            </option>
-          ))}
-        </select>
-        <div className="flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            className="px-5 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-xl transition-colors"
+          <div className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" onClick={onClose} />
+          
+          <motion.div 
+            className="relative bg-white rounded-3xl shadow-2xl p-6 sm:p-8 w-full max-w-md border border-gray-200/50"
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            transition={{ duration: 0.2 }}
           >
-            Cancel
-          </button>
-          <button
-            onClick={() => onCreate({ title, type })}
-            className="px-5 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-medium rounded-xl transition-colors"
-          >
-            Create Project
-          </button>
-        </div>
-      </div>
-    </motion.div>
+            {/* Header */}
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                  Create New Project
+                </h2>
+                <p className="text-gray-500 text-sm mt-1">Choose a diagram type and give it a name</p>
+              </div>
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={onClose}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </motion.button>
+            </div>
+
+            {/* Project Title */}
+            <div className="mb-4">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Project Title</label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Enter project name..."
+                className="w-full p-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 transition-all text-gray-900 placeholder-gray-400"
+                autoFocus
+              />
+            </div>
+
+            {/* Diagram Type Selection - Dropdown */}
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Diagram Type</label>
+              <select
+                value={type}
+                onChange={(e) => setType(e.target.value)}
+                className="w-full p-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-100 transition-all text-gray-900 bg-white"
+              >
+                {DIAGRAM_TYPES.map((diagramType) => (
+                  <option key={diagramType.value} value={diagramType.value}>
+                    {diagramType.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-3">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={onClose}
+                className="flex-1 px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl transition-colors"
+              >
+                Cancel
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={handleCreate}
+                disabled={!title.trim()}
+                className={`flex-1 px-6 py-3 font-semibold rounded-xl transition-all ${
+                  title.trim()
+                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md hover:shadow-lg'
+                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                Create Project
+              </motion.button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };
 
@@ -111,7 +169,13 @@ const Home = () => {
       };
       setProjects((prevProjects) => [...prevProjects, newProject]);
       setShowModal(false);
-      navigate(`/editor/${docRef.id}?title=${project.title}&type=${project.type}`);
+      
+      // Navigate to whiteboard or diagram editor based on type
+      if (project.type === 'whiteboard') {
+        navigate(`/whiteboard/${docRef.id}?title=${project.title}`);
+      } else {
+        navigate(`/editor/${docRef.id}?title=${project.title}&type=${project.type}`);
+      }
     } catch (error) {
       console.error('Error adding document: ', error);
     }
@@ -126,11 +190,19 @@ const Home = () => {
     }
   };
 
+  const handleProjectClick = (project) => {
+    if (project.type === 'whiteboard') {
+      navigate(`/whiteboard/${project.id}?title=${project.title}`);
+    } else {
+      navigate(`/editor/${project.id}?title=${project.title}&type=${project.type}`);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-indigo-50 pb-24 md:pb-0">
-      {/* Mobile Header - Matching Chat Page Style */}
+    <div className="min-h-screen bg-indigo-50/30 pb-24 md:pb-0">
+      {/* Mobile Header */}
       {isMobile && (
-        <div className="fixed top-0 left-0 right-0 z-30 bg-white shadow-sm border-b border-indigo-100">
+        <div className="fixed top-0 left-0 right-0 z-30 bg-white/80 backdrop-blur-lg shadow-sm border-b border-indigo-100">
           <div className="flex items-center justify-between p-4 pt-8 pl-6">
             <div className="flex items-center gap-4">
               <div className="p-3 rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-500 shadow-lg">
@@ -146,7 +218,7 @@ const Home = () => {
         </div>
       )}
 
-      <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 ${isMobile ? 'pt-24 pb-24' : 'py-16'}`}>
+      <div className={`relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 ${isMobile ? 'pt-24 pb-32' : 'py-16'}`}>
         {/* Desktop Header */}
         {!isMobile && (
           <div className="flex items-center justify-between mb-10">
@@ -202,7 +274,7 @@ const Home = () => {
                 key={project.id}
                 {...project}
                 snapshot={project.snapshot}
-                onClick={() => navigate(`/editor/${project.id}?title=${project.title}&type=${project.type}`)}
+                onClick={() => handleProjectClick(project)}
                 onDelete={() => handleDeleteProject(project.id)}
                 teamMembers={project.allowedUsers}
               />

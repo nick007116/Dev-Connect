@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MessageCircle, Code, Menu, X, Sparkles, Monitor } from 'lucide-react';
+import { MessageCircle, Code, Menu, X, Sparkles, Monitor, Wrench } from 'lucide-react'; // Replace Terminal with Wrench
 import { getAuth, signOut } from "firebase/auth";
 import { useNavigate, useLocation } from 'react-router-dom';
 import Loader from './Diagrams/pages/Loader';
@@ -12,7 +12,9 @@ const SideIcons = ({ activeTab, setActiveTab, showMenu, setShowMenu, userData, o
   const navigate = useNavigate();
   const location = useLocation();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const currentPath = location.pathname; // Extract current path
+  const currentPath = location.pathname;
+  
+  const isProfilePage = currentPath === '/profile';
   
   useEffect(() => {
     const handleResize = () => {
@@ -58,9 +60,8 @@ const SideIcons = ({ activeTab, setActiveTab, showMenu, setShowMenu, userData, o
 
   const handleNavigation = (tab) => {
     setActiveTab(tab);
-    setShowMenu(false); // Close menu after navigation on mobile
+    setShowMenu(false);
     
-    // Set loading state with appropriate type
     setLoading(true);
     
     if (tab === 'chat') {
@@ -75,12 +76,14 @@ const SideIcons = ({ activeTab, setActiveTab, showMenu, setShowMenu, userData, o
     } else if (tab === 'remote-desktop') {
       setLoadingType('remote-desktop');
       navigate('/remote-desktop');
+    } else if (tab === 'dev-tools') { // Replace code-playground with dev-tools
+      setLoadingType('dev-tools');
+      navigate('/dev-tools');
     }
     
-    // Hide loader after 1 second or when page loads
     setTimeout(() => {
       setLoading(false);
-    }, 800); // Changed to 1 second as requested
+    }, 800);
   };
 
   const handleProfileClick = () => {
@@ -88,27 +91,24 @@ const SideIcons = ({ activeTab, setActiveTab, showMenu, setShowMenu, userData, o
     setShowProfileMenu(false);
   };
 
-  // Don't show bottom nav when chat is open on mobile
   const shouldShowMobileNav = !isChatOpen;
-
-  // Don't show profile in personal chat view or in project AI view
-  const shouldShowProfile = !isChatOpen && currentPath !== '/project-ai';
+  const shouldShowProfile = !isChatOpen && currentPath !== '/project-ai' && !isProfilePage;
   
   return (
     <>
       {loading && <Loader type={loadingType} />}
       
-      {/* Mobile Nav Bar (Bottom) - With fixed-size items */}
+      {/* Mobile Nav Bar (Bottom) */}
       {shouldShowMobileNav && (
         <div className="fixed bottom-0 left-0 right-0 md:hidden bg-white border-t border-gray-200 z-40 shadow-md">
-          <div className="flex justify-around items-center py-2 px-2">
+          <div className="flex justify-around items-center py-2 px-1">
             {/* Chat */}
             <button
               onClick={() => handleNavigation('chat')}
-              className="flex flex-col items-center justify-center p-2 w-[72px] h-[68px]"
+              className="flex flex-col items-center justify-center p-2 w-[64px] h-[64px]"
             >
-              <div className={`flex items-center justify-center w-10 h-10 rounded-md ${activeTab === 'chat' ? 'bg-blue-100' : ''}`}>
-                <MessageCircle className={`w-6 h-6 ${activeTab === 'chat' ? 'text-blue-600' : 'text-gray-500'}`} />
+              <div className={`flex items-center justify-center w-9 h-9 rounded-md ${activeTab === 'chat' ? 'bg-blue-100' : ''}`}>
+                <MessageCircle className={`w-5 h-5 ${activeTab === 'chat' ? 'text-blue-600' : 'text-gray-500'}`} />
               </div>
               <span className={`text-xs mt-1 ${activeTab === 'chat' ? 'text-blue-600 font-medium' : 'text-gray-500'}`}>Chat</span>
             </button>
@@ -116,41 +116,52 @@ const SideIcons = ({ activeTab, setActiveTab, showMenu, setShowMenu, userData, o
             {/* Diagrams */}
             <button
               onClick={() => handleNavigation('code')}
-              className="flex flex-col items-center justify-center p-2 w-[72px] h-[68px]"
+              className="flex flex-col items-center justify-center p-2 w-[64px] h-[64px]"
             >
-              <div className={`flex items-center justify-center w-10 h-10 rounded-md ${activeTab === 'code' ? 'bg-green-100' : ''}`}>
-                <Code className={`w-6 h-6 ${activeTab === 'code' ? 'text-green-600' : 'text-gray-500'}`} />
+              <div className={`flex items-center justify-center w-9 h-9 rounded-md ${activeTab === 'code' ? 'bg-green-100' : ''}`}>
+                <Code className={`w-5 h-5 ${activeTab === 'code' ? 'text-green-600' : 'text-gray-500'}`} />
               </div>
               <span className={`text-xs mt-1 ${activeTab === 'code' ? 'text-green-600 font-medium' : 'text-gray-500'}`}>Diagrams</span>
             </button>
             
-            {/* Projects - Mobile Nav */}
+            {/* AI Studio */}
             <button
               onClick={() => handleNavigation('project-kickstarter')}
-              className="flex flex-col items-center justify-center p-2 w-[72px] h-[68px]"
+              className="flex flex-col items-center justify-center p-2 w-[64px] h-[64px]"
             >
-              <div className={`flex items-center justify-center w-10 h-10 rounded-md ${activeTab === 'project-kickstarter' ? 'bg-purple-100' : ''}`}>
-                <Sparkles className={`w-6 h-6 ${activeTab === 'project-kickstarter' ? 'text-purple-600' : 'text-gray-500'}`} />
+              <div className={`flex items-center justify-center w-9 h-9 rounded-md ${activeTab === 'project-kickstarter' ? 'bg-purple-100' : ''}`}>
+                <Sparkles className={`w-5 h-5 ${activeTab === 'project-kickstarter' ? 'text-purple-600' : 'text-gray-500'}`} />
               </div>
               <span className={`text-xs mt-1 ${activeTab === 'project-kickstarter' ? 'text-purple-600 font-medium' : 'text-gray-500'}`}>AI Studio</span>
+            </button>
+            
+            {/* Dev Tools */}
+            <button
+              onClick={() => handleNavigation('dev-tools')}
+              className="flex flex-col items-center justify-center p-2 w-[64px] h-[64px]"
+            >
+              <div className={`flex items-center justify-center w-9 h-9 rounded-md ${activeTab === 'dev-tools' ? 'bg-indigo-100' : ''}`}>
+                <Wrench className={`w-5 h-5 ${activeTab === 'dev-tools' ? 'text-indigo-600' : 'text-gray-500'}`} />
+              </div>
+              <span className={`text-xs mt-1 ${activeTab === 'dev-tools' ? 'text-indigo-600 font-medium' : 'text-gray-500'}`}>Tools</span>
             </button>
             
             {/* Desktop */}
             <button
               onClick={() => handleNavigation('remote-desktop')}
-              className="flex flex-col items-center justify-center p-2 w-[72px] h-[68px]"
+              className="flex flex-col items-center justify-center p-2 w-[64px] h-[64px]"
             >
-              <div className={`flex items-center justify-center w-10 h-10 rounded-md ${activeTab === 'remote-desktop' ? 'bg-emerald-100' : ''}`}>
-                <Monitor className={`w-6 h-6 ${activeTab === 'remote-desktop' ? 'text-emerald-600' : 'text-gray-500'}`} />
+              <div className={`flex items-center justify-center w-9 h-9 rounded-md ${activeTab === 'remote-desktop' ? 'bg-orange-100' : ''}`}>
+                <Monitor className={`w-5 h-5 ${activeTab === 'remote-desktop' ? 'text-orange-600' : 'text-gray-500'}`} />
               </div>
-              <span className={`text-xs mt-1 ${activeTab === 'remote-desktop' ? 'text-emerald-600 font-medium' : 'text-gray-500'}`}>Desktop</span>
+              <span className={`text-xs mt-1 ${activeTab === 'remote-desktop' ? 'text-orange-600 font-medium' : 'text-gray-500'}`}>Desktop</span>
             </button>
           </div>
         </div>
       )}
 
-      {/* Mobile Profile Button (Top Right) */}
-      {shouldShowProfile && userData && currentPath !== '/project-ai' && (
+      {/* Mobile Profile Button */}
+      {shouldShowProfile && userData && (
         <button
           onClick={handleProfileClick}
           className={`fixed top-9 right-4 z-50 md:hidden bg-white rounded-2xl shadow-md overflow-hidden transition-all duration-300 ${loading ? 'blur-sm opacity-70' : ''}`}
@@ -171,7 +182,7 @@ const SideIcons = ({ activeTab, setActiveTab, showMenu, setShowMenu, userData, o
         />
       )}
       
-      {/* Desktop Sidebar - Hidden on mobile */}
+      {/* Desktop Sidebar */}
       <div className={`fixed top-0 left-0 md:flex hidden flex-col items-center p-4 border-r border-gray-300 h-screen bg-gradient-to-r from-gray-50 to-gray-100 transition-all duration-300 ${showMenu ? 'w-64' : 'w-20'} rounded-r-lg z-[60]`}>
         <button
           onClick={() => setShowMenu(!showMenu)}
@@ -203,16 +214,23 @@ const SideIcons = ({ activeTab, setActiveTab, showMenu, setShowMenu, userData, o
             {showMenu && <span className="ml-4 text-lg">AI Project Studio</span>}
           </button>
           <button
-            onClick={() => handleNavigation('remote-desktop')}
-            className={`flex items-center p-3 rounded-lg transition-colors duration-300 w-full ${activeTab === 'remote-desktop' ? 'bg-emerald-100' : 'hover:bg-gray-100'}`}
+            onClick={() => handleNavigation('dev-tools')}
+            className={`flex items-center p-3 rounded-lg transition-colors duration-300 w-full ${activeTab === 'dev-tools' ? 'bg-indigo-100' : 'hover:bg-gray-100'}`}
           >
-            <Monitor className={`w-6 h-6 text-emerald-600 ${!showMenu && 'mx-auto'}`} />
+            <Wrench className={`w-6 h-6 text-indigo-600 ${!showMenu && 'mx-auto'}`} />
+            {showMenu && <span className="ml-4 text-lg">Dev Tools</span>}
+          </button>
+          <button
+            onClick={() => handleNavigation('remote-desktop')}
+            className={`flex items-center p-3 rounded-lg transition-colors duration-300 w-full ${activeTab === 'remote-desktop' ? 'bg-orange-100' : 'hover:bg-gray-100'}`}
+          >
+            <Monitor className={`w-6 h-6 text-orange-600 ${!showMenu && 'mx-auto'}`} />
             {showMenu && <span className="ml-4 text-lg">Remote Desktop</span>}
           </button>
         </div>
 
         <div className="mt-auto w-full">
-          {userData && (
+          {userData && !isProfilePage && (
             <button
               onClick={handleProfileClick}
               className={`flex items-center p-2 rounded-lg transition-all duration-300 hover:bg-gray-100 w-full ${!showMenu && 'justify-center'} ${loading ? 'blur-sm opacity-70' : ''}`}

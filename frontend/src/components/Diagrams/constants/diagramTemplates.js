@@ -31,12 +31,14 @@ export const DIAGRAM_TEMPLATES = {
     class PureComponent
     class FunctionComponent
     Component <|-- PureComponent
-    Component <|-- FunctionComponent`
+    Component <|-- FunctionComponent`,
+  whiteboard: `<!-- Whiteboard mode - Free drawing canvas -->`
 };
 
 export const DIAGRAM_TYPES = [
   { value: 'flowchart', label: 'Flowchart' },
   { value: 'sequence', label: 'Sequence Diagram' },
   { value: 'state', label: 'State Diagram' },
-  { value: 'class', label: 'Class Diagram' }
+  { value: 'class', label: 'Class Diagram' },
+  { value: 'whiteboard', label: 'Whiteboard' }
 ];

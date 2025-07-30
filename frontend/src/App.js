@@ -11,10 +11,12 @@ import MainLoader from "./components/MainLoader";
 import ProjectKickstarter from "./components/AIProjectKickstarter/ProjectKickstarter";
 import RemoteDesktopShare from "./components/RemoteDesktop/RemoteDesktopShare";
 import SmartLearningHub from "./components/LearningHub/SmartLearningHub";
+import DevTools from "./components/DevTools/DevTools"; // Replace CodePlayground with DevTools
 import { useNavigate } from 'react-router-dom';
 import { auth, onAuthStateChanged, doc, getDoc, db } from './lib/firebase';
 import { AnimatePresence, motion } from 'framer-motion';
-import Profile from "./components/Profile"; // Import the Profile component
+import Profile from "./components/Profile";
+import WhiteboardPage from './components/Diagrams/pages/WhiteboardPage';
 
 const App = () => {
   const [user, setUser] = useState(null);
@@ -67,6 +69,7 @@ const App = () => {
   };
 
   const isEditorRoute = location.pathname.startsWith('/editor');
+  const isWhiteboardRoute = location.pathname.startsWith('/whiteboard');
   const isLogoutRoute = location.pathname === '/logout';
 
   const determineActiveTab = (pathname) => {
@@ -75,6 +78,7 @@ const App = () => {
     if (pathname === '/project-ai') return 'project-kickstarter';
     if (pathname === '/remote-desktop') return 'remote-desktop';
     if (pathname === '/learning-hub') return 'learning-hub';
+    if (pathname === '/dev-tools') return 'dev-tools';
     return 'chat';
   };
 
@@ -82,8 +86,7 @@ const App = () => {
     navigate('/logout');
   };
 
-  // Show sidebar except on editor and logout routes
-  const shouldShowSideIcons = user && !isEditorRoute && !isLogoutRoute;
+  const shouldShowSideIcons = user && !isEditorRoute && !isWhiteboardRoute && !isLogoutRoute; // Update this line
 
   if (loading) {
     return <MainLoader onLoadingComplete={() => setLoading(false)} />;
@@ -94,7 +97,7 @@ const App = () => {
       {shouldShowSideIcons && (
         <SideIcons
           activeTab={determineActiveTab(location.pathname)}
-          setActiveTab={() => {}} // Remove setActiveTab since we're not using it
+          setActiveTab={() => {}}
           showMenu={showMenu}
           setShowMenu={setShowMenu}
           userData={userData}
@@ -123,9 +126,11 @@ const App = () => {
               <Route path="/" element={<Navigate to="/chat" replace />} />
               <Route path="/chat" element={<HomePage user={user} userData={userData} isChatOpen={isChatOpen} setIsChatOpen={setIsChatOpen} />} />
               <Route path="/diagrams" element={<Home />} />
-              <Route path="/project-ai" element={<ProjectKickstarter user={user} setShowMenu={setShowMenu} />} /> {/* Updated route */}
+              <Route path="/whiteboard/:id" element={<WhiteboardPage />} />
+              <Route path="/project-ai" element={<ProjectKickstarter user={user} setShowMenu={setShowMenu} />} />
               <Route path="/remote-desktop" element={<RemoteDesktopShare user={user} />} />
               <Route path="/learning-hub" element={<SmartLearningHub user={user} />} />
+              <Route path="/dev-tools" element={<DevTools user={user} userData={userData} />} /> {/* Add DevTools route */}
               <Route path="/editor/:id" element={<DiagramEditor currentUser={user} />} />
               <Route path="/logout" element={
                 <LogOut 

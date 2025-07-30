@@ -34,7 +34,7 @@ const app = express();
 const server = http.createServer(app);
 
 const allowedOrigins = [
-  process.env.FRONTEND_URL || "https://devconnect-three.vercel.app",
+  process.env.FRONTEND_URL || "https://devconnect-three.vercel.app/",
   "http://localhost:3000"
 ];
 
