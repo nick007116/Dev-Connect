@@ -21,6 +21,7 @@ import ChatHeader from "./ChatHeader";
 import MessageList from "./MessageList";
 import { ChevronDown } from "lucide-react";
 import SearchBar from './SearchBar';
+import { getSocketUrl } from '../../lib/backendUrl';
 
 const MESSAGES_PAGE_SIZE = 20;
 const createPeerConnection = () => {
@@ -103,18 +104,19 @@ const ChatWindow = ({ currentUser, chatUser, onBack, updateChatList }) => {
   useEffect(() => {
     let newSocket;
     let cancelled = false;
+    const socketUrl = getSocketUrl();
+
+    if (!socketUrl) {
+      console.warn('Chat socket is disabled: configure REACT_APP_BACKEND_URL in Vercel.');
+      return undefined;
+    }
 
     const connectSocket = async () => {
       try {
         const token = await auth.currentUser?.getIdToken();
         if (!token || cancelled) return;
 
-        newSocket = io(
-          process.env.REACT_APP_SOCKET_URL ||
-            process.env.REACT_APP_BACKEND_URL ||
-            'http://localhost:5000',
-          { auth: { token } }
-        );
+        newSocket = io(socketUrl, { auth: { token } });
 
         newSocket.on("connect", () => {
           newSocket.emit("join_chat", chatId);

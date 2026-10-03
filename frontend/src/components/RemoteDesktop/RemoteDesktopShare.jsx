@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Monitor, Users, Share, Eye, Wifi, AlertCircle, Maximize, Minimize, X, UserX, Check, Shield } from 'lucide-react';
 import { useSocket } from '../../hooks/useSocket';
 import { useWebRTC } from '../../hooks/useWebRTC';
+import { getBackendUrl } from '../../lib/backendUrl';
 
 const RemoteDesktopShare = ({ user }) => {
   const [activeSession, setActiveSession] = useState(null);
@@ -48,7 +49,11 @@ const RemoteDesktopShare = ({ user }) => {
     const checkNetworkQuality = async () => {
       try {
         const startTime = Date.now();
-        const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+        const backendUrl = getBackendUrl();
+        if (!backendUrl) {
+          setNetworkQuality('unknown');
+          return;
+        }
         await fetch(`${backendUrl}/api/health`, { method: 'HEAD' });
         const latency = Date.now() - startTime;
         

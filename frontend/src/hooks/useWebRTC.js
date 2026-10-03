@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import Peer from 'peerjs';
+import { getBackendUrl } from '../lib/backendUrl';
 
 export const useWebRTC = (socket, sessionId, userId) => {
   const [localStream, setLocalStream] = useState(null);
@@ -19,7 +20,10 @@ export const useWebRTC = (socket, sessionId, userId) => {
     // Test network speed
     const startTime = Date.now();
     try {
-      const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+      const backendUrl = getBackendUrl();
+      if (!backendUrl) {
+        throw new Error('Backend is not configured');
+      }
       await fetch(`${backendUrl}/api/health`, { method: 'HEAD' });
       const latency = Date.now() - startTime;
       

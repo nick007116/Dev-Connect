@@ -4,6 +4,14 @@ import Login from "./LoginPage";
 import Register from "./RegisterPage";
 import { ensureDemoProfile } from "../../lib/demoProfile";
 
+const getDemoSignInError = (error) => {
+  if (error.code === "auth/admin-restricted-operation" || error.code === "auth/operation-not-allowed") {
+    return "Demo sign-in is disabled for this Firebase project. Enable Authentication > Sign-in method > Anonymous in Firebase Console, then redeploy if you changed frontend environment variables.";
+  }
+
+  return error.message || "Failed to open demo account";
+};
+
 const AuthHandler = ({ onUserAuthenticated }) => {
   const [authState, setAuthState] = useState({
     user: null,
@@ -88,7 +96,7 @@ const AuthHandler = ({ onUserAuthenticated }) => {
       console.error("Error signing in to demo account:", error);
       setAuthState((prev) => ({
         ...prev,
-        error: error.message || "Failed to open demo account",
+        error: getDemoSignInError(error),
         loading: false
       }));
     }

@@ -44,6 +44,12 @@ For demo access, enable **Anonymous** under **Firebase Console → Authenticatio
 
 In `backend/.env`, `FIREBASE_SERVICE_ACCOUNT_PATH` must point to a Firebase Admin service-account JSON file (the default is `backend/config/firebase-service-account.json`). Keep that file private and out of version control. Configure the Firebase Realtime Database and Firestore, and ensure your security rules allow authenticated users to access the data they need.
 
+#### Vercel deployment
+
+Deploy the backend separately to a Node.js host that supports persistent Socket.IO connections. In Vercel's frontend project settings, add the frontend variables from `frontend/.env.example` and set both `REACT_APP_BACKEND_URL` and `REACT_APP_SOCKET_URL` to the deployed backend's HTTPS origin (for example, `https://your-api.example.com`). Add the Vercel frontend origin to the backend's comma-separated `FRONTEND_URL`, and redeploy both projects after changing environment values. The production frontend does not fall back to `localhost`.
+
+In Firebase Console, enable the **Anonymous** provider, add the deployed Vercel domain under Authentication's authorized domains, and configure Firestore/Realtime Database rules to allow the intended authenticated-user operations. Firebase client configuration alone does not grant database access; permission rules must authorize each query and write.
+
 #### Backend
 ```bash
 cd backend
