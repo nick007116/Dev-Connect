@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signInAnonymously, signOut } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut } from "firebase/auth";
 import { 
   getFirestore, 
   doc, 
@@ -33,13 +33,20 @@ const firebaseConfig = {
     measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
 };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const rtdb = getDatabase(app); // Get Realtime Database instance
+export const firebaseConfigured = Boolean(
+  firebaseConfig.apiKey &&
+  firebaseConfig.authDomain &&
+  firebaseConfig.projectId &&
+  firebaseConfig.appId
+);
+
+const app = firebaseConfigured ? initializeApp(firebaseConfig) : null;
+const auth = app ? getAuth(app) : null;
+const db = app ? getFirestore(app) : null;
+const rtdb = app ? getDatabase(app) : null;
 
 export { 
-  auth, db, rtdb, GoogleAuthProvider, signInWithPopup, signInAnonymously, signOut, onAuthStateChanged,
+  auth, db, rtdb, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged,
   doc, getDoc, setDoc, collection, addDoc, query, onSnapshot, orderBy, 
   where, getDocs, updateDoc, limit, startAfter, serverTimestamp, deleteDoc, 
   ref, onValue, set, onDisconnect, remove, arrayUnion, arrayRemove

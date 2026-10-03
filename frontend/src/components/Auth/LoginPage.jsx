@@ -49,7 +49,7 @@ const Login = ({ onGoogleLogin, onDemoLogin, isLoading, error }) => {
           className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-4 rounded-lg hover:shadow-lg transition-all duration-200 disabled:opacity-60"
         >
           <Sparkles className="w-5 h-5" />
-          <span className="font-medium">{isLoading ? "Opening demo..." : "Explore with a demo account"}</span>
+          <span className="font-medium">Explore demo</span>
         </motion.button>
 
         {error && (
@@ -64,7 +64,7 @@ const Login = ({ onGoogleLogin, onDemoLogin, isLoading, error }) => {
           transition={{ delay: 0.4 }}
           className="mt-8 text-center text-sm text-gray-500"
         >
-          Demo access creates an anonymous Firebase account. AI and image-upload features require their API keys.
+          Demo mode uses sample data only. Nothing is saved or sent.
         </motion.div>
       </motion.div>
     </div>

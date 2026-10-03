@@ -17,7 +17,7 @@ import { auth, onAuthStateChanged, doc, getDoc, db, signOut } from './lib/fireba
 import { AnimatePresence, motion } from 'framer-motion';
 import Profile from "./components/Profile";
 import WhiteboardPage from './components/Diagrams/pages/WhiteboardPage';
-import { ensureDemoProfile } from './lib/demoProfile';
+import DemoWorkspace from './components/DemoWorkspace';
 
 const App = () => {
   const [user, setUser] = useState(null);
@@ -26,6 +26,7 @@ const App = () => {
   const [loading, setLoading] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
+  const isDemoMode = location.pathname === '/demo' || location.pathname.startsWith('/demo/');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [isChatOpen, setIsChatOpen] = useState(false);
 
@@ -43,17 +44,23 @@ const App = () => {
   }, []);
 
   useEffect(() => {
+    if (isDemoMode) {
+      setLoading(false);
+      return undefined;
+    }
+
+    if (!auth) {
+      setLoading(false);
+      return undefined;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         try {
-          const userData = currentUser.isAnonymous
-            ? await ensureDemoProfile(currentUser)
-            : await getDoc(doc(db, 'users', currentUser.uid)).then((userDoc) => (
-              userDoc.exists() ? userDoc.data() : null
-            ));
-          if (userData) {
+          const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
+          if (userDoc.exists()) {
             setUser(currentUser);
-            setUserData(userData);
+            setUserData(userDoc.data());
             if (location.pathname === '/') {
               navigate('/chat');
             }
@@ -71,7 +78,7 @@ const App = () => {
     });
 
     return () => unsubscribe();
-  }, [navigate, location.pathname]);
+  }, [navigate, location.pathname, isDemoMode]);
 
   const handleUserAuthenticated = (user, userData) => {
     setUser(user);
@@ -80,15 +87,16 @@ const App = () => {
 
   const isEditorRoute = location.pathname.startsWith('/editor');
   const isWhiteboardRoute = location.pathname.startsWith('/whiteboard');
-  const isLogoutRoute = location.pathname === '/logout';
+  const isLogoutRoute = location.pathname === '/logout' || location.pathname === '/demo/logout';
 
   const determineActiveTab = (pathname) => {
-    if (pathname === '/chat') return 'chat';
-    if (pathname === '/diagrams') return 'code';
-    if (pathname === '/project-ai') return 'project-kickstarter';
-    if (pathname === '/remote-desktop') return 'remote-desktop';
-    if (pathname === '/learning-hub') return 'learning-hub';
-    if (pathname === '/dev-tools') return 'dev-tools';
+    const appPath = pathname.startsWith('/demo/') ? pathname.slice('/demo'.length) : pathname;
+    if (appPath === '/chat') return 'chat';
+    if (appPath === '/diagrams') return 'code';
+    if (appPath === '/project-ai') return 'project-kickstarter';
+    if (appPath === '/remote-desktop') return 'remote-desktop';
+    if (appPath === '/learning-hub') return 'learning-hub';
+    if (appPath === '/dev-tools') return 'dev-tools';
     return 'chat';
   };
 
@@ -98,7 +106,7 @@ const App = () => {
 
   const completeLogout = async () => {
     try {
-      await signOut(auth);
+      if (auth) await signOut(auth);
       setUser(null);
       setUserData(null);
       navigate('/login', { replace: true });
@@ -107,7 +115,13 @@ const App = () => {
     }
   };
 
-  const shouldShowSideIcons = user && !isEditorRoute && !isWhiteboardRoute && !isLogoutRoute; // Update this line
+  const demoUserData = {
+    name: 'Demo Developer',
+    bio: 'Exploring DevConnect',
+    profilePic: 'https://ui-avatars.com/api/?name=Demo+Developer&background=6366f1&color=ffffff&size=128'
+  };
+  const activeUserData = isDemoMode ? demoUserData : userData;
+  const shouldShowSideIcons = (user || isDemoMode) && !isEditorRoute && !isWhiteboardRoute && !isLogoutRoute;
 
   if (loading) {
     return <MainLoader onLoadingComplete={() => setLoading(false)} />;
@@ -121,9 +135,10 @@ const App = () => {
           setActiveTab={() => {}}
           showMenu={showMenu}
           setShowMenu={setShowMenu}
-          userData={userData}
-          onLogout={handleLogout}
+          userData={activeUserData}
+          onLogout={isDemoMode ? () => navigate('/demo/logout') : handleLogout}
           isChatOpen={isChatOpen}
+          isDemo={isDemoMode}
         />
       )}
 
@@ -136,10 +151,13 @@ const App = () => {
         transition={{ duration: 0.3 }}
       >
         <AnimatePresence mode="sync">
-          {!user ? (
+          {isDemoMode ? (
+            <DemoWorkspace onExit={() => navigate('/', { replace: true })} />
+          ) : !user ? (
             <Routes location={location} key="unauthenticated">
               <Route path="/" element={<LandingPage />} />
-              <Route path="/login" element={<AuthHandler onUserAuthenticated={handleUserAuthenticated} />} />
+              <Route path="/login" element={<AuthHandler onUserAuthenticated={handleUserAuthenticated} onDemoLogin={() => navigate('/demo/chat')} />} />
+              <Route path="/demo/*" element={<DemoWorkspace onExit={() => navigate('/', { replace: true })} />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           ) : (
@@ -159,6 +177,7 @@ const App = () => {
                 />
               } />
               <Route path="/profile" element={<Profile userData={userData} onLogout={handleLogout} />} />
+              <Route path="/demo/*" element={<DemoWorkspace onExit={() => navigate('/', { replace: true })} />} />
               <Route path="*" element={<Navigate to="/chat" replace />} />
             </Routes>
           )}

@@ -55,14 +55,24 @@ const LandingPage = () => {
           <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-4xl mx-auto">
             The ultimate AI-powered platform for developers to collaborate, learn, and build projects together. From instant project setup to mentorship - everything you need in one place.
           </p>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => navigate('/login')}
-            className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300"
-          >
-            Start Building Today
-          </motion.button>
+          <div className="flex flex-wrap justify-center gap-3">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => navigate('/login')}
+              className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300"
+            >
+              Start Building Today
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => navigate('/demo/chat')}
+              className="px-8 py-3 bg-white text-purple-700 border border-purple-200 rounded-full font-semibold text-lg shadow hover:shadow-lg transition-all duration-300"
+            >
+              Explore Demo
+            </motion.button>
+          </div>
 
           {/* Quick Stats */}
           <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-3xl mx-auto">

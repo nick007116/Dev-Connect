@@ -30,9 +30,9 @@ devconnect/
 
 #### Vercel deployment
 
-The frontend is a read-only workspace showcase populated with sample data. Set the Vercel project's Root Directory to `frontend`; its `vercel.json` builds this showcase, which does not import or call Firebase, a backend, or sign-in. No frontend environment variables or Firebase credentials are needed. Chat messages, diagrams, projects, and learning progress shown there are examples only and are not saved.
+Set the Vercel project's Root Directory to `frontend`. The normal landing page and Google sign-in remain available; visitors can choose **Explore Demo** to view the main workspace shell with sample data. Demo browsing does not authenticate, make Firebase/backend requests, or save changes. Configure the Firebase web app values from `frontend/.env.example` in Vercel to enable Google sign-in for real users.
 
-The optional backend is separate and is not needed to host the Vercel showcase.
+The optional backend is separate. Chat, AI, and live remote-desktop features need their corresponding backend/API configuration; they are disabled in demo mode.
 
 #### Backend
 ```bash
@@ -60,7 +60,7 @@ npm start
 
 ### Environment Variables
 
-Environment variables are not needed for the read-only frontend showcase. The optional backend retains its own `.env.example`.
+Use the frontend and backend `.env.example` files as templates. Frontend Firebase values must be configured in Vercel to enable real-user Google authentication.
 
 ### Running Tests
 

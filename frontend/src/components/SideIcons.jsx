@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { MessageCircle, Code, Menu, X, Sparkles, Monitor, Wrench } from 'lucide-react'; // Replace Terminal with Wrench
+import { MessageCircle, Code, Menu, X, Sparkles, Monitor, Wrench, BookOpen } from 'lucide-react';
 import { getAuth, signOut } from "firebase/auth";
 import { useNavigate, useLocation } from 'react-router-dom';
 import Loader from './Diagrams/pages/Loader';
 
-const SideIcons = ({ activeTab, setActiveTab, showMenu, setShowMenu, userData, onLogout, isChatOpen }) => {
+const SideIcons = ({ activeTab, setActiveTab, showMenu, setShowMenu, userData, onLogout, isChatOpen, isDemo = false }) => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -44,6 +44,11 @@ const SideIcons = ({ activeTab, setActiveTab, showMenu, setShowMenu, userData, o
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
+    if (isDemo) {
+      onLogout();
+      return;
+    }
+
     const auth = getAuth();
     
     try {
@@ -63,22 +68,26 @@ const SideIcons = ({ activeTab, setActiveTab, showMenu, setShowMenu, userData, o
     setShowMenu(false);
     
     setLoading(true);
+    const demoPrefix = isDemo ? '/demo' : '';
     
     if (tab === 'chat') {
       setLoadingType('chat');
-      navigate('/chat');
+      navigate(`${demoPrefix}/chat`);
     } else if (tab === 'code') {
       setLoadingType('diagrams');
-      navigate('/diagrams');
+      navigate(`${demoPrefix}/diagrams`);
     } else if (tab === 'project-kickstarter') {
       setLoadingType('ai-project');
-      navigate('/project-ai');
+      navigate(`${demoPrefix}/project-ai`);
     } else if (tab === 'remote-desktop') {
       setLoadingType('remote-desktop');
-      navigate('/remote-desktop');
-    } else if (tab === 'dev-tools') { // Replace code-playground with dev-tools
+      navigate(`${demoPrefix}/remote-desktop`);
+    } else if (tab === 'dev-tools') {
       setLoadingType('dev-tools');
-      navigate('/dev-tools');
+      navigate(`${demoPrefix}/dev-tools`);
+    } else if (tab === 'learning-hub') {
+      setLoadingType('ai-project');
+      navigate(`${demoPrefix}/learning-hub`);
     }
     
     setTimeout(() => {
@@ -92,7 +101,7 @@ const SideIcons = ({ activeTab, setActiveTab, showMenu, setShowMenu, userData, o
   };
 
   const shouldShowMobileNav = !isChatOpen;
-  const shouldShowProfile = !isChatOpen && currentPath !== '/project-ai' && !isProfilePage;
+  const shouldShowProfile = !isDemo && !isChatOpen && currentPath !== '/project-ai' && !isProfilePage;
   
   return (
     <>
@@ -100,8 +109,8 @@ const SideIcons = ({ activeTab, setActiveTab, showMenu, setShowMenu, userData, o
       
       {/* Mobile Nav Bar (Bottom) */}
       {shouldShowMobileNav && (
-        <div className="fixed bottom-0 left-0 right-0 md:hidden bg-white border-t border-gray-200 z-40 shadow-md">
-          <div className="flex justify-around items-center py-2 px-1">
+        <div className="fixed bottom-0 left-0 right-0 overflow-x-auto md:hidden bg-white border-t border-gray-200 z-40 shadow-md">
+          <div className="flex min-w-max justify-around items-center py-2 px-1">
             {/* Chat */}
             <button
               onClick={() => handleNavigation('chat')}
@@ -144,6 +153,15 @@ const SideIcons = ({ activeTab, setActiveTab, showMenu, setShowMenu, userData, o
                 <Wrench className={`w-5 h-5 ${activeTab === 'dev-tools' ? 'text-indigo-600' : 'text-gray-500'}`} />
               </div>
               <span className={`text-xs mt-1 ${activeTab === 'dev-tools' ? 'text-indigo-600 font-medium' : 'text-gray-500'}`}>Tools</span>
+            </button>
+            <button
+              onClick={() => handleNavigation('learning-hub')}
+              className="flex flex-col items-center justify-center p-2 w-[64px] h-[64px]"
+            >
+              <div className={`flex items-center justify-center w-9 h-9 rounded-md ${activeTab === 'learning-hub' ? 'bg-rose-100' : ''}`}>
+                <BookOpen className={`w-5 h-5 ${activeTab === 'learning-hub' ? 'text-rose-600' : 'text-gray-500'}`} />
+              </div>
+              <span className={`text-xs mt-1 ${activeTab === 'learning-hub' ? 'text-rose-600 font-medium' : 'text-gray-500'}`}>Learn</span>
             </button>
             
             {/* Desktop */}
@@ -221,6 +239,13 @@ const SideIcons = ({ activeTab, setActiveTab, showMenu, setShowMenu, userData, o
             {showMenu && <span className="ml-4 text-lg">Dev Tools</span>}
           </button>
           <button
+            onClick={() => handleNavigation('learning-hub')}
+            className={`flex items-center p-3 rounded-lg transition-colors duration-300 w-full ${activeTab === 'learning-hub' ? 'bg-rose-100' : 'hover:bg-gray-100'}`}
+          >
+            <BookOpen className={`w-6 h-6 text-rose-600 ${!showMenu && 'mx-auto'}`} />
+            {showMenu && <span className="ml-4 text-lg">Learning Hub</span>}
+          </button>
+          <button
             onClick={() => handleNavigation('remote-desktop')}
             className={`flex items-center p-3 rounded-lg transition-colors duration-300 w-full ${activeTab === 'remote-desktop' ? 'bg-orange-100' : 'hover:bg-gray-100'}`}
           >
@@ -230,7 +255,7 @@ const SideIcons = ({ activeTab, setActiveTab, showMenu, setShowMenu, userData, o
         </div>
 
         <div className="mt-auto w-full">
-          {userData && !isProfilePage && (
+          {userData && !isProfilePage && !isDemo && (
             <button
               onClick={handleProfileClick}
               className={`flex items-center p-2 rounded-lg transition-all duration-300 hover:bg-gray-100 w-full ${!showMenu && 'justify-center'} ${loading ? 'blur-sm opacity-70' : ''}`}

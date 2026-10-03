@@ -1,18 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { auth, GoogleAuthProvider, signInWithPopup, signInAnonymously, onAuthStateChanged, db, doc, getDoc } from "../../lib/firebase";
+import { auth, firebaseConfigured, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, db, doc, getDoc } from "../../lib/firebase";
 import Login from "./LoginPage";
 import Register from "./RegisterPage";
-import { ensureDemoProfile } from "../../lib/demoProfile";
 
-const getDemoSignInError = (error) => {
-  if (error.code === "auth/admin-restricted-operation" || error.code === "auth/operation-not-allowed") {
-    return "Demo sign-in is disabled for this Firebase project. Enable Authentication > Sign-in method > Anonymous in Firebase Console, then redeploy if you changed frontend environment variables.";
-  }
-
-  return error.message || "Failed to open demo account";
-};
-
-const AuthHandler = ({ onUserAuthenticated }) => {
+const AuthHandler = ({ onUserAuthenticated, onDemoLogin }) => {
   const [authState, setAuthState] = useState({
     user: null,
     isRegistered: false,
@@ -21,14 +12,16 @@ const AuthHandler = ({ onUserAuthenticated }) => {
   });
 
   useEffect(() => {
+    if (!firebaseConfigured || !auth) {
+      setAuthState((prev) => ({ ...prev, loading: false }));
+      return undefined;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         try {
-          const userData = currentUser.isAnonymous
-            ? await ensureDemoProfile(currentUser)
-            : await getDoc(doc(db, "users", currentUser.uid)).then((userDoc) => (
-              userDoc.exists() ? userDoc.data() : null
-            ));
+          const userDoc = await getDoc(doc(db, "users", currentUser.uid));
+          const userData = userDoc.exists() ? userDoc.data() : null;
           
           if (userData) {
             setAuthState({
@@ -69,6 +62,14 @@ const AuthHandler = ({ onUserAuthenticated }) => {
   }, [onUserAuthenticated]);
 
   const handleGoogleLogin = async () => {
+    if (!firebaseConfigured || !auth) {
+      setAuthState((prev) => ({
+        ...prev,
+        error: "Google sign-in is unavailable because Firebase is not configured."
+      }));
+      return;
+    }
+
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
@@ -76,28 +77,6 @@ const AuthHandler = ({ onUserAuthenticated }) => {
       setAuthState(prev => ({
         ...prev,
         error: error.message || "Failed to login with Google"
-      }));
-    }
-  };
-
-  const handleDemoLogin = async () => {
-    setAuthState((prev) => ({ ...prev, loading: true, error: null }));
-    try {
-      const { user } = await signInAnonymously(auth);
-      const userData = await ensureDemoProfile(user);
-      setAuthState({
-        user,
-        isRegistered: true,
-        error: null,
-        loading: false
-      });
-      onUserAuthenticated(user, userData);
-    } catch (error) {
-      console.error("Error signing in to demo account:", error);
-      setAuthState((prev) => ({
-        ...prev,
-        error: getDemoSignInError(error),
-        loading: false
       }));
     }
   };
@@ -114,7 +93,7 @@ const AuthHandler = ({ onUserAuthenticated }) => {
     return (
       <Login
         onGoogleLogin={handleGoogleLogin}
-        onDemoLogin={handleDemoLogin}
+        onDemoLogin={onDemoLogin}
         isLoading={authState.loading}
         error={authState.error}
       />
