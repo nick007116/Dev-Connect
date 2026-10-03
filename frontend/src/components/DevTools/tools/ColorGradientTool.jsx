@@ -9,7 +9,6 @@ import {
   Plus,
   Minus,
   Save,
-  RefreshCw,
   Star
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -189,39 +188,6 @@ const ColorGradientTool = ({
     link.href = canvas.toDataURL();
     link.click();
   }, [gradientColors]);
-
-  // Color harmony generation
-  const generateHarmony = useCallback((baseColor, type) => {
-    const rgb = hexToRgb(baseColor);
-    if (!rgb) return [baseColor];
-    
-    const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
-    let colors = [baseColor];
-    
-    switch (type) {
-      case 'complementary':
-        colors.push(`hsl(${(hsl.h + 180) % 360}, ${hsl.s}%, ${hsl.l}%)`);
-        break;
-      case 'triadic':
-        colors.push(`hsl(${(hsl.h + 120) % 360}, ${hsl.s}%, ${hsl.l}%)`);
-        colors.push(`hsl(${(hsl.h + 240) % 360}, ${hsl.s}%, ${hsl.l}%)`);
-        break;
-      case 'analogous':
-        colors.push(`hsl(${(hsl.h + 30) % 360}, ${hsl.s}%, ${hsl.l}%)`);
-        colors.push(`hsl(${(hsl.h - 30 + 360) % 360}, ${hsl.s}%, ${hsl.l}%)`);
-        break;
-      case 'tetradic':
-        colors.push(`hsl(${(hsl.h + 90) % 360}, ${hsl.s}%, ${hsl.l}%)`);
-        colors.push(`hsl(${(hsl.h + 180) % 360}, ${hsl.s}%, ${hsl.l}%)`);
-        colors.push(`hsl(${(hsl.h + 270) % 360}, ${hsl.s}%, ${hsl.l}%)`);
-        break;
-      default:
-        colors = [baseColor]; // Added default case
-        break;
-    }
-    
-    return colors;
-  }, [hexToRgb, rgbToHsl]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">

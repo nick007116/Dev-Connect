@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, Check } from 'lucide-react';
 import { 
   db, updateDoc, doc, getDoc, setDoc, collection, query, 
   where, onSnapshot, serverTimestamp
@@ -34,18 +33,40 @@ const WhiteboardEditor = ({
   const [saveStatus, setSaveStatus] = useState('saved');
   const [isToolsCollapsed, setIsToolsCollapsed] = useState(false);
   const [showNavigator, setShowNavigator] = useState(true);
-  const [canvasOffset, setCanvasOffset] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const [lastPanPoint, setLastPanPoint] = useState({ x: 0, y: 0 });
   const [viewportDimensions, setViewportDimensions] = useState({ width: 0, height: 0 });
   
   // User collaboration states
   const [allowedUsers, setAllowedUsers] = useState([]);
-  const [allowedUserDetails, setAllowedUserDetails] = useState([]);
-  const [userList, setUserList] = useState([]);
+  const [allowedUserDetails] = useState([]);
+  const [userList] = useState([]);
   const [activeCollaborators, setActiveCollaborators] = useState({});
-  const [lastBroadcastTime, setLastBroadcastTime] = useState(Date.now());
   const [isReceivingChanges, setIsReceivingChanges] = useState(false);
+  const isReceivingChangesRef = useRef(isReceivingChanges);
+  const historyRef = useRef([]);
+  const historyIndexRef = useRef(-1);
+  isReceivingChangesRef.current = isReceivingChanges;
+
+  useEffect(() => {
+    historyRef.current = history;
+    historyIndexRef.current = historyIndex;
+  }, [history, historyIndex]);
+
+  const saveToHistory = useCallback(() => {
+    if (!canvasRef.current) return;
+    const dataURL = canvasRef.current.toDataURL('image/png');
+    const currentHistory = historyRef.current;
+    const currentIndex = historyIndexRef.current;
+    const newHistory = currentIndex < currentHistory.length - 1
+      ? currentHistory.slice(0, currentIndex + 1)
+      : [...currentHistory];
+    const updatedHistory = [...newHistory, dataURL];
+    historyRef.current = updatedHistory;
+    historyIndexRef.current = newHistory.length;
+    setHistory(updatedHistory);
+    setHistoryIndex(newHistory.length);
+  }, []);
 
   // Fetch allowed users
   useEffect(() => {
@@ -119,19 +140,7 @@ const WhiteboardEditor = ({
         });
       }, 100);
     }
-  }, [initialCanvasData]);
-
-  // Save to history
-  const saveToHistory = () => {
-    if (!canvasRef.current) return;
-    const canvas = canvasRef.current;
-    const dataURL = canvas.toDataURL('image/png');
-    const newHistory = historyIndex < history.length - 1 
-      ? history.slice(0, historyIndex + 1) 
-      : [...history];
-    setHistory([...newHistory, dataURL]);
-    setHistoryIndex(newHistory.length);
-  };
+  }, [initialCanvasData, saveToHistory]);
 
   // Handle save
   const handleSave = async () => {
@@ -172,7 +181,7 @@ const WhiteboardEditor = ({
   };
 
   // Get canvas coordinates
-  const getCanvasCoordinates = (e) => {
+  const getCanvasCoordinates = useCallback((e) => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
@@ -182,7 +191,7 @@ const WhiteboardEditor = ({
     const x = (clientX - rect.left) + (container ? container.scrollLeft : 0);
     const y = (clientY - rect.top) + (container ? container.scrollTop : 0);
     return { x, y };
-  };
+  }, []);
 
   // Handle navigator click
   const handleNavigatorClick = (e) => {
@@ -201,37 +210,22 @@ const WhiteboardEditor = ({
     });
   };
 
-  // Mouse/Touch handlers
-  const handlePointerDown = useCallback((e) => {
-    e.preventDefault();
-    if (tool === 'move' || e.button === 1 || e.ctrlKey) {
-      setIsPanning(true);
-      setLastPanPoint({ x: e.clientX, y: e.clientY });
-      return;
-    }
-    startDrawing(e);
-  }, [tool]);
+  const updateMiniMap = useCallback(() => {
+    if (!miniMapCanvasRef.current || !canvasRef.current) return;
 
-  const handlePointerMove = useCallback((e) => {
-    e.preventDefault();
-    if (isPanning) {
-      const deltaX = e.clientX - lastPanPoint.x;
-      const deltaY = e.clientY - lastPanPoint.y;
-      setCanvasOffset(prev => ({ x: prev.x + deltaX, y: prev.y + deltaY }));
-      setLastPanPoint({ x: e.clientX, y: e.clientY });
-      return;
-    }
-    draw(e);
-  }, [isPanning, lastPanPoint, isDrawing, tool, color, strokeWidth, canvasOffset]);
-
-  const handlePointerUp = useCallback((e) => {
-    e.preventDefault();
-    setIsPanning(false);
-    stopDrawing();
-  }, [isDrawing]);
+    const miniCtx = miniMapCanvasRef.current.getContext('2d');
+    const mainCanvas = canvasRef.current;
+    const miniCanvas = miniMapCanvasRef.current;
+    miniCtx.clearRect(0, 0, miniCanvas.width, miniCanvas.height);
+    miniCtx.drawImage(
+      mainCanvas,
+      0, 0, mainCanvas.width, mainCanvas.height,
+      0, 0, miniCanvas.width, miniCanvas.height
+    );
+  }, []);
 
   // Start drawing
-  const startDrawing = (e) => {
+  const startDrawing = useCallback((e) => {
     if (tool === 'select' || isPanning) return;
     setIsDrawing(true);
     const canvas = canvasRef.current;
@@ -245,10 +239,10 @@ const WhiteboardEditor = ({
     ctx.beginPath();
     ctx.moveTo(x, y);
     lastPointRef.current = { x, y };
-  };
+  }, [tool, isPanning, color, strokeWidth, getCanvasCoordinates]);
 
   // Update the draw function for smoother lines
-  const draw = (e) => {
+  const draw = useCallback((e) => {
     if (!isDrawing || tool === 'select' || isPanning || isReceivingChanges) return;
     
     const canvas = canvasRef.current;
@@ -277,10 +271,10 @@ const WhiteboardEditor = ({
         updateMiniMap();
       }
     }
-  };
+  }, [isDrawing, tool, isPanning, isReceivingChanges, getCanvasCoordinates, color, strokeWidth, updateMiniMap]);
 
   // Stop drawing
-  const stopDrawing = () => {
+  const stopDrawing = useCallback(() => {
     if (isDrawing) {
       setIsDrawing(false);
       lastPointRef.current = null;
@@ -306,39 +300,44 @@ const WhiteboardEditor = ({
         });
         
         // Update broadcast time to prevent quick subsequent broadcasts
-        setLastBroadcastTime(Date.now());
       }
       
       // Update mini-map after stroke completion
       updateMiniMap();
     }
-  };
+  }, [isDrawing, saveToHistory, isOnline, projectId, tool, currentUser?.uid, updateMiniMap]);
 
-  // Update the broadcastCanvasChanges function to be even more efficient
-  const broadcastCanvasChanges = () => {
-    const now = Date.now();
-    // Further reduce broadcast interval for smoother collaboration
-    if (now - lastBroadcastTime < 500) return; // Reduced from 700ms to 500ms
-    
-    setLastBroadcastTime(now);
-    const canvas = canvasRef.current;
-    if (!canvas || !isOnline) return;
-    
-    // Use a WebP format with optimized compression
-    const canvasData = canvas.toDataURL('image/webp', 0.7);
-    const diagramRef = doc(db, 'diagrams', projectId);
-    
-    // Use more efficient update with fewer fields
-    updateDoc(diagramRef, {
-      'canvasData.imageData': canvasData,
-      'canvasData.dimensions': { width: canvas.width, height: canvas.height },
-      'canvasData.tool': tool,
-      lastModifiedBy: currentUser?.uid,
-      lastModified: serverTimestamp()
-    }).catch(() => {
-      // Silent fail
-    });
-  };
+  // Mouse/Touch handlers
+  const handlePointerDown = useCallback((e) => {
+    e.preventDefault();
+    if (tool === 'move' || e.button === 1 || e.ctrlKey) {
+      setIsPanning(true);
+      setLastPanPoint({ x: e.clientX, y: e.clientY });
+      return;
+    }
+    startDrawing(e);
+  }, [tool, startDrawing]);
+
+  const handlePointerMove = useCallback((e) => {
+    e.preventDefault();
+    if (isPanning) {
+      const deltaX = e.clientX - lastPanPoint.x;
+      const deltaY = e.clientY - lastPanPoint.y;
+      if (containerRef.current) {
+        containerRef.current.scrollLeft -= deltaX;
+        containerRef.current.scrollTop -= deltaY;
+      }
+      setLastPanPoint({ x: e.clientX, y: e.clientY });
+      return;
+    }
+    draw(e);
+  }, [isPanning, lastPanPoint, draw]);
+
+  const handlePointerUp = useCallback((e) => {
+    e.preventDefault();
+    setIsPanning(false);
+    stopDrawing();
+  }, [stopDrawing]);
 
   // Clear canvas
   const clearCanvas = () => {
@@ -348,25 +347,6 @@ const WhiteboardEditor = ({
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     saveToHistory();
-  };
-
-  // Add the updateMiniMap function
-  const updateMiniMap = () => {
-    if (!miniMapCanvasRef.current || !canvasRef.current) return;
-    
-    const miniCtx = miniMapCanvasRef.current.getContext('2d');
-    const mainCanvas = canvasRef.current;
-    const miniCanvas = miniMapCanvasRef.current;
-    
-    // Clear mini-map
-    miniCtx.clearRect(0, 0, miniCanvas.width, miniCanvas.height);
-    
-    // Draw the main canvas scaled down to mini-map
-    miniCtx.drawImage(
-      mainCanvas,
-      0, 0, mainCanvas.width, mainCanvas.height,
-      0, 0, miniCanvas.width, miniCanvas.height
-    );
   };
 
   // Set viewport dimensions
@@ -486,7 +466,7 @@ const WhiteboardEditor = ({
       const remoteCanvas = data.canvasData;
       const updatedBy = data.lastModifiedBy;
       
-      if (remoteCanvas && updatedBy !== currentUser.uid && !isReceivingChanges) {
+      if (remoteCanvas && updatedBy !== currentUser.uid && !isReceivingChangesRef.current) {
         setIsReceivingChanges(true);
         
         // Clear any existing timeout to prevent stuck states
@@ -578,23 +558,8 @@ const WhiteboardEditor = ({
     }
   }, [history, historyIndex]);
 
-  // Add a smart auto-sync that triggers when needed without showing UI
-  useEffect(() => {
-    if (!isOnline || !canvasRef.current) return;
-    
-    // Sync the canvas automatically when user switches tools
-    // This ensures eraser strokes are properly synchronized
-    const autoSyncInterval = setInterval(() => {
-      if (!isDrawing && historyIndex > 0) {
-        forceSyncCanvas(true); // Pass true to indicate silent sync (no UI)
-      }
-    }, 10000); // Every 10 seconds if idle
-    
-    return () => clearInterval(autoSyncInterval);
-  }, [isDrawing, historyIndex, isOnline]);
-
   // Update the forceSyncCanvas function to optionally be silent (no UI indicators)
-  const forceSyncCanvas = (silent = false) => {
+  const forceSyncCanvas = useCallback((silent = false) => {
     if (!canvasRef.current || !isOnline) return;
     
     if (!silent) {
@@ -628,7 +593,20 @@ const WhiteboardEditor = ({
           setIsSaving(false);
         }
       });
-  };
+  }, [isOnline, projectId, currentUser?.uid]);
+
+  // Add a smart auto-sync that triggers when needed without showing UI
+  useEffect(() => {
+    if (!isOnline || !canvasRef.current) return undefined;
+
+    const autoSyncInterval = setInterval(() => {
+      if (!isDrawing && historyIndex > 0) {
+        forceSyncCanvas(true);
+      }
+    }, 10000);
+
+    return () => clearInterval(autoSyncInterval);
+  }, [isDrawing, historyIndex, isOnline, forceSyncCanvas]);
 
   // Add this useEffect to initialize and update the mini-map when needed
   useEffect(() => {
@@ -662,7 +640,7 @@ const WhiteboardEditor = ({
     return () => {
       // Cleanup if needed
     };
-  }, [history, historyIndex, canvasRef.current, miniMapCanvasRef.current]);
+  }, [history, historyIndex]);
 
   return (
     <div className="relative w-full h-full overflow-hidden bg-gray-50" ref={containerRef}>

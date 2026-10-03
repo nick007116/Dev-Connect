@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  ArrowLeft, Save, Check, AlertCircle, Users, Clock,
+  ArrowLeft, Save, Check, AlertCircle, Users,
   Plus, ChevronDown, Download, X, UserPlus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -80,7 +80,7 @@ const FloatingNavigation = ({
     };
 
     fetchAllowedUsers();
-  }, [projectId]);
+  }, [projectId, localAllowedUserDetails.length]);
 
   // Update local state when allowedUserDetails prop changes
   useEffect(() => {

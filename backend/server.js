@@ -33,10 +33,11 @@ initializeFirebaseAdmin();
 const app = express();
 const server = http.createServer(app);
 
-const allowedOrigins = [
-  process.env.FRONTEND_URL || "https://devconnect-three.vercel.app/",
-  "http://localhost:3000"
-];
+const frontendOrigins = (process.env.FRONTEND_URL || "https://devconnect-three.vercel.app")
+  .split(",")
+  .map((origin) => origin.trim().replace(/\/+$/, ""))
+  .filter(Boolean);
+const allowedOrigins = [...new Set([...frontendOrigins, "http://localhost:3000"])];
 
 // Configure Socket.IO with authentication
 const io = new Server(server, {

@@ -29,12 +29,25 @@ devconnect/
 
 ### Installation
 
+#### Configure environment variables
+
+Copy each example file to `.env` in the same directory, then fill in the values:
+
+```powershell
+Copy-Item frontend/.env.example frontend/.env
+Copy-Item backend/.env.example backend/.env
+```
+
+In `frontend/.env`, add the Firebase web app configuration from **Firebase Console → Project settings → Your apps**. Add the Realtime Database URL if you use a non-default database. Add a Gemini API key for AI generation and an ImgBB API key for profile-picture uploads.
+
+For demo access, enable **Anonymous** under **Firebase Console → Authentication → Sign-in method**. Google sign-in also requires enabling the Google provider. The frontend Firebase web API key is public in a browser build; restrict it using Firebase API-key and authorized-domain settings, and never put a service-account key in the frontend.
+
+In `backend/.env`, `FIREBASE_SERVICE_ACCOUNT_PATH` must point to a Firebase Admin service-account JSON file (the default is `backend/config/firebase-service-account.json`). Keep that file private and out of version control. Configure the Firebase Realtime Database and Firestore, and ensure your security rules allow authenticated users to access the data they need.
+
 #### Backend
 ```bash
 cd backend
 npm install
-cp config/firebase-service-account.json.example config/firebase-service-account.json
-# Add your Firebase credentials
 npm start
 ```
 
@@ -57,7 +70,7 @@ npm start
 
 ### Environment Variables
 
-Create `.env` files in both backend and frontend directories with necessary configuration.
+Use the `.env.example` files as templates. Restart the frontend after changing its `.env` file; Create React App reads these variables at startup.
 
 ### Running Tests
 

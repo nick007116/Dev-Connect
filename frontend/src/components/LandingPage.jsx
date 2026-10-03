@@ -228,10 +228,10 @@ const LandingPage = () => {
         <div className="max-w-4xl mx-auto px-4">
           <p className="text-lg mb-4">© 2024 DevConnect. Empowering developers worldwide.</p>
           <div className="flex justify-center space-x-8 text-sm">
-            <a href="#" className="hover:text-blue-600 transition-colors">Privacy Policy</a>
-            <a href="#" className="hover:text-blue-600 transition-colors">Terms of Service</a>
-            <a href="#" className="hover:text-blue-600 transition-colors">Support</a>
-            <a href="#" className="hover:text-blue-600 transition-colors">Documentation</a>
+            <span className="hover:text-blue-600 transition-colors">Privacy Policy</span>
+            <span className="hover:text-blue-600 transition-colors">Terms of Service</span>
+            <span className="hover:text-blue-600 transition-colors">Support</span>
+            <span className="hover:text-blue-600 transition-colors">Documentation</span>
           </div>
         </div>
       </footer>

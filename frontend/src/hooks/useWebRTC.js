@@ -7,24 +7,20 @@ export const useWebRTC = (socket, sessionId, userId) => {
   const [isConnected, setIsConnected] = useState(false);
   const [isHost, setIsHost] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
-  const [currentQuality, setCurrentQuality] = useState('AUTO');
-  const [networkStats, setNetworkStats] = useState({
-    bitrate: 0,
-    latency: 0,
-    frameRate: 30,
-    packetLoss: 0
-  });
   
   const peerRef = useRef(null);
+  const isHostRef = useRef(isHost);
   const localVideoRef = useRef(null);
   const connectionsRef = useRef(new Map());
+  isHostRef.current = isHost;
 
   // Adaptive quality constraints based on network
   const getOptimalConstraints = useCallback(async () => {
     // Test network speed
     const startTime = Date.now();
     try {
-      await fetch('/api/health', { method: 'HEAD' });
+      const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+      await fetch(`${backendUrl}/api/health`, { method: 'HEAD' });
       const latency = Date.now() - startTime;
       
       if (latency < 50) {
@@ -121,7 +117,7 @@ export const useWebRTC = (socket, sessionId, userId) => {
               peerId: id,
               action: 'join',
               userId: userId,
-              isHost: isHost
+              isHost: isHostRef.current
             });
           }
         });
@@ -136,7 +132,7 @@ export const useWebRTC = (socket, sessionId, userId) => {
               return newMap;
             });
 
-            if (!isHost) {
+            if (!isHostRef.current) {
               setConnectionStatus('viewing');
               setIsConnected(true);
             }
@@ -257,74 +253,6 @@ export const useWebRTC = (socket, sessionId, userId) => {
     }
   }, [localStream, isHost]);
 
-  // Start screen share
-  const startScreenShare = useCallback(async () => {
-    if (!sessionId) {
-      throw new Error('No session ID available');
-    }
-
-    try {
-      setConnectionStatus('connecting');
-
-      const constraints = await getOptimalConstraints();
-      const stream = await navigator.mediaDevices.getDisplayMedia(constraints);
-
-      setLocalStream(stream);
-      setIsHost(true);
-      setIsConnected(true);
-      setConnectionStatus('sharing');
-
-      // Handle stream end
-      stream.getVideoTracks()[0].onended = () => {
-        stopScreenShare();
-      };
-
-      // Update peer connection
-      if (peerRef.current && socket && sessionId) {
-        socket.emit('peer_connection', {
-          sessionId: sessionId,
-          peerId: peerRef.current.id,
-          action: 'update',
-          userId: userId,
-          isHost: true
-        });
-      }
-
-      return stream;
-    } catch (error) {
-      setConnectionStatus('error');
-      throw error;
-    }
-  }, [userId, socket, sessionId, getOptimalConstraints]);
-
-  // Join as viewer
-  const joinAsViewer = useCallback(async () => {
-    if (!sessionId) {
-      throw new Error('No session ID available');
-    }
-
-    try {
-      setConnectionStatus('connecting');
-      setIsHost(false);
-      setIsConnected(true);
-      
-      if (peerRef.current && socket && sessionId) {
-        socket.emit('peer_connection', {
-          sessionId: sessionId,
-          peerId: peerRef.current.id,
-          action: 'update',
-          userId: userId,
-          isHost: false
-        });
-      }
-      
-      return true;
-    } catch (error) {
-      setConnectionStatus('error');
-      throw error;
-    }
-  }, [userId, socket, sessionId]);
-
   const stopScreenShare = useCallback(() => {
     try {
       if (localStream) {
@@ -361,16 +289,73 @@ export const useWebRTC = (socket, sessionId, userId) => {
     }
   }, [localStream, socket, sessionId]);
 
+  // Start screen share
+  const startScreenShare = useCallback(async () => {
+    if (!sessionId) {
+      throw new Error('No session ID available');
+    }
+
+    try {
+      setConnectionStatus('connecting');
+
+      const constraints = await getOptimalConstraints();
+      const stream = await navigator.mediaDevices.getDisplayMedia(constraints);
+
+      setLocalStream(stream);
+      setIsHost(true);
+      setIsConnected(true);
+      setConnectionStatus('sharing');
+
+      stream.getVideoTracks()[0].onended = stopScreenShare;
+
+      if (peerRef.current && socket && sessionId) {
+        socket.emit('peer_connection', {
+          sessionId: sessionId,
+          peerId: peerRef.current.id,
+          action: 'update',
+          userId: userId,
+          isHost: true
+        });
+      }
+
+      return stream;
+    } catch (error) {
+      setConnectionStatus('error');
+      throw error;
+    }
+  }, [userId, socket, sessionId, getOptimalConstraints, stopScreenShare]);
+
+  // Join as viewer
+  const joinAsViewer = useCallback(async () => {
+    if (!sessionId) {
+      throw new Error('No session ID available');
+    }
+
+    try {
+      setConnectionStatus('connecting');
+      setIsHost(false);
+      setIsConnected(true);
+      
+      if (peerRef.current && socket && sessionId) {
+        socket.emit('peer_connection', {
+          sessionId: sessionId,
+          peerId: peerRef.current.id,
+          action: 'update',
+          userId: userId,
+          isHost: false
+        });
+      }
+      
+      return true;
+    } catch (error) {
+      setConnectionStatus('error');
+      throw error;
+    }
+  }, [userId, socket, sessionId]);
+
   const getConnectionQuality = useCallback(() => {
-    if (!isConnected) return 'disconnected';
-    
-    // Network quality detection logic
-    const latency = networkStats.latency;
-    if (latency < 50) return 'excellent';
-    if (latency < 150) return 'good';
-    if (latency < 300) return 'fair';
-    return 'poor';
-  }, [isConnected, networkStats.latency]);
+    return isConnected ? 'excellent' : 'disconnected';
+  }, [isConnected]);
 
   return {
     localStream,
@@ -379,8 +364,6 @@ export const useWebRTC = (socket, sessionId, userId) => {
     isHost,
     connectionStatus,
     connectionQuality: getConnectionQuality(),
-    currentQuality,
-    networkStats,
     startScreenShare,
     joinAsViewer,
     stopScreenShare,

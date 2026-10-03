@@ -51,17 +51,17 @@ const QRGeneratorTool = ({ qrText, setQrText, generateQRCode, downloadQR }) => {
   }, [qrText, size, qrColor, backgroundColor]);
 
   // Convert hex to RGB
-  const hexToRgb = (hex) => {
+  const hexToRgb = useCallback((hex) => {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result ? {
       r: parseInt(result[1], 16),
       g: parseInt(result[2], 16),
       b: parseInt(result[3], 16)
     } : { r: 0, g: 0, b: 0 };
-  };
+  }, []);
 
   // Apply color customizations
-  const applyCustomizations = (ctx) => {
+  const applyCustomizations = useCallback((ctx) => {
     const imageData = ctx.getImageData(0, 0, size, size);
     const data = imageData.data;
 
@@ -80,10 +80,10 @@ const QRGeneratorTool = ({ qrText, setQrText, generateQRCode, downloadQR }) => {
     }
 
     ctx.putImageData(imageData, 0, 0);
-  };
+  }, [hexToRgb, qrColor, size]);
 
   // Add logo to perfect center of QR code with optimal sizing
-  const addLogoToQR = (ctx) => {
+  const addLogoToQR = useCallback((ctx) => {
     return new Promise((resolve) => {
       const logoImg = new Image();
       logoImg.onload = () => {
@@ -126,7 +126,7 @@ const QRGeneratorTool = ({ qrText, setQrText, generateQRCode, downloadQR }) => {
       };
       logoImg.src = logo;
     });
-  };
+  }, [logo, logoSize, size]);
 
   // Create custom styled QR code using canvas
   const generateCustomQRCode = useCallback(async () => {
@@ -184,8 +184,8 @@ const QRGeneratorTool = ({ qrText, setQrText, generateQRCode, downloadQR }) => {
       console.error('Error generating custom QR:', error);
       return generateAdvancedQRCode();
     }
-  }, [qrText, qrColor, backgroundColor, gradientEnabled, gradientColor2, gradientDirection, 
-      size, logo, logoSize, borderRadius, generateAdvancedQRCode]);
+  }, [qrText, backgroundColor, gradientEnabled, gradientColor2, gradientDirection,
+      size, logo, generateAdvancedQRCode, applyCustomizations, addLogoToQR]);
 
   // Regenerate QR code when settings change
   useEffect(() => {

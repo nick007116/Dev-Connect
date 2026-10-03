@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
+  auth,
   db,
   collection,
   query,
@@ -100,42 +101,59 @@ const ChatWindow = ({ currentUser, chatUser, onBack, updateChatList }) => {
   }, [chatId, chatUser.id]);
 
   useEffect(() => {
-    const newSocket = io(process.env.REACT_APP_SOCKET_URL, {
-      auth: { token: currentUser.uid },
-    });
+    let newSocket;
+    let cancelled = false;
 
-    newSocket.on("connect", () => {
-      newSocket.emit("join_chat", chatId);
-    });
+    const connectSocket = async () => {
+      try {
+        const token = await auth.currentUser?.getIdToken();
+        if (!token || cancelled) return;
 
-    newSocket.on("new_message", (message) => {
-      if (message.chatId === chatId) {
-        const decryptedText = CryptoJS.AES.decrypt(
-          message.text,
-          "secret-key"
-        ).toString(CryptoJS.enc.Utf8);
-        message.text = decryptedText;
-        setMessages((prev) => {
-          if (!prev.find((msg) => msg.id === message.id)) {
-            return [...prev, message];
-          }
-          return prev;
+        newSocket = io(
+          process.env.REACT_APP_SOCKET_URL ||
+            process.env.REACT_APP_BACKEND_URL ||
+            'http://localhost:5000',
+          { auth: { token } }
+        );
+
+        newSocket.on("connect", () => {
+          newSocket.emit("join_chat", chatId);
         });
-        scrollToBottom();
-        updateChatList(chatId, message);
+
+        newSocket.on("new_message", (message) => {
+          if (message.chatId === chatId) {
+            const decryptedText = CryptoJS.AES.decrypt(
+              message.text,
+              "secret-key"
+            ).toString(CryptoJS.enc.Utf8);
+            message.text = decryptedText;
+            setMessages((prev) => {
+              if (!prev.find((msg) => msg.id === message.id)) {
+                return [...prev, message];
+              }
+              return prev;
+            });
+            scrollToBottom();
+            updateChatList(chatId, message);
+          }
+        });
+
+        newSocket.on("typing_status", ({ userId, isTyping }) => {
+          if (userId === chatUser.id) {
+            setIsTyping(isTyping);
+          }
+        });
+
+        setSocket(newSocket);
+      } catch (error) {
+        console.error("Failed to connect chat socket:", error);
       }
-    });
+    };
 
-    newSocket.on("typing_status", ({ userId, isTyping }) => {
-      if (userId === chatUser.id) {
-        setIsTyping(isTyping);
-      }
-    });
-
-    setSocket(newSocket);
-
+    connectSocket();
     return () => {
-      newSocket.disconnect();
+      cancelled = true;
+      newSocket?.disconnect();
     };
   }, [currentUser.uid, chatUser.id, chatId, scrollToBottom, updateChatList]);
 

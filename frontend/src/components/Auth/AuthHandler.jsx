@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { auth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, db, doc, getDoc } from "../../lib/firebase";
+import { auth, GoogleAuthProvider, signInWithPopup, signInAnonymously, onAuthStateChanged, db, doc, getDoc } from "../../lib/firebase";
 import Login from "./LoginPage";
 import Register from "./RegisterPage";
+import { ensureDemoProfile } from "../../lib/demoProfile";
 
 const AuthHandler = ({ onUserAuthenticated }) => {
   const [authState, setAuthState] = useState({
@@ -15,17 +16,20 @@ const AuthHandler = ({ onUserAuthenticated }) => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         try {
-          const userDocRef = doc(db, "users", currentUser.uid);
-          const userDoc = await getDoc(userDocRef);
+          const userData = currentUser.isAnonymous
+            ? await ensureDemoProfile(currentUser)
+            : await getDoc(doc(db, "users", currentUser.uid)).then((userDoc) => (
+              userDoc.exists() ? userDoc.data() : null
+            ));
           
-          if (userDoc.exists()) {
+          if (userData) {
             setAuthState({
               user: currentUser,
               isRegistered: true,
               error: null,
               loading: false
             });
-            onUserAuthenticated(currentUser, userDoc.data());
+            onUserAuthenticated(currentUser, userData);
           } else {
             setAuthState({
               user: currentUser,
@@ -35,10 +39,11 @@ const AuthHandler = ({ onUserAuthenticated }) => {
             });
           }
         } catch (error) {
+          console.error("Error loading authenticated user profile:", error);
           setAuthState({
             user: null,
             isRegistered: false,
-            error: "Failed to fetch user data",
+            error: error.message || "Failed to fetch user data",
             loading: false
           });
         }
@@ -62,7 +67,29 @@ const AuthHandler = ({ onUserAuthenticated }) => {
     } catch (error) {
       setAuthState(prev => ({
         ...prev,
-        error: "Failed to login with Google"
+        error: error.message || "Failed to login with Google"
+      }));
+    }
+  };
+
+  const handleDemoLogin = async () => {
+    setAuthState((prev) => ({ ...prev, loading: true, error: null }));
+    try {
+      const { user } = await signInAnonymously(auth);
+      const userData = await ensureDemoProfile(user);
+      setAuthState({
+        user,
+        isRegistered: true,
+        error: null,
+        loading: false
+      });
+      onUserAuthenticated(user, userData);
+    } catch (error) {
+      console.error("Error signing in to demo account:", error);
+      setAuthState((prev) => ({
+        ...prev,
+        error: error.message || "Failed to open demo account",
+        loading: false
       }));
     }
   };
@@ -75,18 +102,15 @@ const AuthHandler = ({ onUserAuthenticated }) => {
     );
   }
 
-  if (authState.error) {
-    return (
-      <div className="h-screen flex items-center justify-center">
-        <div className="bg-red-50 text-red-500 p-4 rounded-lg">
-          {authState.error}
-        </div>
-      </div>
-    );
-  }
-
   if (!authState.user) {
-    return <Login onGoogleLogin={handleGoogleLogin} />;
+    return (
+      <Login
+        onGoogleLogin={handleGoogleLogin}
+        onDemoLogin={handleDemoLogin}
+        isLoading={authState.loading}
+        error={authState.error}
+      />
+    );
   }
 
   if (!authState.isRegistered) {

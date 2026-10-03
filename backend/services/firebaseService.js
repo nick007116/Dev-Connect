@@ -11,7 +11,9 @@ const initializeFirebaseAdmin = () => {
   if (!firebaseApp) {
     try {
       // Use service account JSON file
-      const serviceAccountPath = path.join(__dirname, '../config/firebase-service-account.json');
+      const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH
+        ? path.resolve(process.cwd(), process.env.FIREBASE_SERVICE_ACCOUNT_PATH)
+        : path.join(__dirname, '../config/firebase-service-account.json');
       
       // Check if service account file exists
       if (fs.existsSync(serviceAccountPath)) {

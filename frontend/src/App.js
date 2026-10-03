@@ -13,10 +13,11 @@ import RemoteDesktopShare from "./components/RemoteDesktop/RemoteDesktopShare";
 import SmartLearningHub from "./components/LearningHub/SmartLearningHub";
 import DevTools from "./components/DevTools/DevTools"; // Replace CodePlayground with DevTools
 import { useNavigate } from 'react-router-dom';
-import { auth, onAuthStateChanged, doc, getDoc, db } from './lib/firebase';
+import { auth, onAuthStateChanged, doc, getDoc, db, signOut } from './lib/firebase';
 import { AnimatePresence, motion } from 'framer-motion';
 import Profile from "./components/Profile";
 import WhiteboardPage from './components/Diagrams/pages/WhiteboardPage';
+import { ensureDemoProfile } from './lib/demoProfile';
 
 const App = () => {
   const [user, setUser] = useState(null);
@@ -45,17 +46,26 @@ const App = () => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         try {
-          const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-          if (userDoc.exists()) {
+          const userData = currentUser.isAnonymous
+            ? await ensureDemoProfile(currentUser)
+            : await getDoc(doc(db, 'users', currentUser.uid)).then((userDoc) => (
+              userDoc.exists() ? userDoc.data() : null
+            ));
+          if (userData) {
             setUser(currentUser);
-            setUserData(userDoc.data());
+            setUserData(userData);
             if (location.pathname === '/') {
               navigate('/chat');
             }
           }
         } catch (error) {
           console.error('Error fetching user data:', error);
+          setUser(null);
+          setUserData(null);
         }
+      } else {
+        setUser(null);
+        setUserData(null);
       }
       setTimeout(() => setLoading(false), 1000);
     });
@@ -84,6 +94,17 @@ const App = () => {
 
   const handleLogout = () => {
     navigate('/logout');
+  };
+
+  const completeLogout = async () => {
+    try {
+      await signOut(auth);
+      setUser(null);
+      setUserData(null);
+      navigate('/login', { replace: true });
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
   };
 
   const shouldShowSideIcons = user && !isEditorRoute && !isWhiteboardRoute && !isLogoutRoute; // Update this line
@@ -134,11 +155,7 @@ const App = () => {
               <Route path="/editor/:id" element={<DiagramEditor currentUser={user} />} />
               <Route path="/logout" element={
                 <LogOut 
-                  onLogoutComplete={() => {
-                    setUser(null);
-                    setUserData(null);
-                    navigate('/login', { replace: true });
-                  }} 
+                  onLogoutComplete={completeLogout}
                 />
               } />
               <Route path="/profile" element={<Profile userData={userData} onLogout={handleLogout} />} />

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   ArrowLeft, 
   Edit, 
@@ -23,7 +23,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { getAuth, signOut } from "firebase/auth";
 import { motion } from 'framer-motion';
-import { rtdb, ref, onValue, set, remove } from '../lib/firebase';
+import { rtdb, ref, set, remove } from '../lib/firebase';
 
 const Profile = ({ userData, onUpdateProfile, onLogout }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -43,47 +43,25 @@ const Profile = ({ userData, onUpdateProfile, onLogout }) => {
   const auth = getAuth();
 
   useEffect(() => {
-    // Track user session
-    if (userData?.uid) {
-      trackCurrentSession();
-    }
-
-    // Check for mobile view
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
     };
 
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [userData?.uid]);
+  }, []);
 
-  const getCurrentDeviceInfo = () => {
-    const userAgent = navigator.userAgent;
-    let deviceType = 'desktop';
-    let deviceName = 'Unknown Device';
-    
-    // Simple device detection
-    if (/Mobile|Android|iPhone|iPad|iPod/i.test(userAgent)) {
-      deviceType = 'mobile';
-      deviceName = 'Mobile Device';
-    } else {
-      deviceName = 'Desktop';
-    }
+  const trackCurrentSession = useCallback(async () => {
+    const userId = userData?.uid;
+    if (!userId) return undefined;
 
-    return {
-      type: deviceType,
-      name: deviceName,
+    const isMobileDevice = /Mobile|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const deviceInfo = {
+      type: isMobileDevice ? 'mobile' : 'desktop',
+      name: isMobileDevice ? 'Mobile Device' : 'Desktop',
       sessionId: Date.now() + '-' + Math.random().toString(36).substring(2, 9)
     };
-  };
-
-  const trackCurrentSession = async () => {
-    if (!userData?.uid) return;
-    
-    const deviceInfo = getCurrentDeviceInfo();
-    const sessionRef = ref(rtdb, `users/${userData.uid}/sessions/${deviceInfo.sessionId}`);
-    
-    // Store session info
+    const sessionRef = ref(rtdb, `users/${userId}/sessions/${deviceInfo.sessionId}`);
     const sessionData = {
       ...deviceInfo,
       lastActive: Date.now(),
@@ -92,20 +70,38 @@ const Profile = ({ userData, onUpdateProfile, onLogout }) => {
     
     await set(sessionRef, sessionData);
     localStorage.setItem('currentSessionId', deviceInfo.sessionId);
-    
-    // Update last active time periodically
+
     const interval = setInterval(async () => {
-      if (userData?.uid) {
-        await set(ref(rtdb, `users/${userData.uid}/sessions/${deviceInfo.sessionId}/lastActive`), Date.now());
-      }
+      await set(ref(rtdb, `users/${userId}/sessions/${deviceInfo.sessionId}/lastActive`), Date.now());
     }, 60000);
-    
-    window.addEventListener('beforeunload', () => {
+    const handleBeforeUnload = () => clearInterval(interval);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
       clearInterval(interval);
-    });
-    
-    return () => clearInterval(interval);
-  };
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [userData?.uid]);
+
+  useEffect(() => {
+    let cleanup;
+    let cancelled = false;
+
+    if (userData?.uid) {
+      trackCurrentSession().then((stopTracking) => {
+        if (cancelled) {
+          stopTracking?.();
+        } else {
+          cleanup = stopTracking;
+        }
+      });
+    }
+
+    return () => {
+      cancelled = true;
+      cleanup?.();
+    };
+  }, [trackCurrentSession, userData?.uid]);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);

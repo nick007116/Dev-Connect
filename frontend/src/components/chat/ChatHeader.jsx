@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { ArrowLeft, Search, X } from "lucide-react";
+import React from "react";
+import { ArrowLeft, Search } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 const ChatHeader = ({ onBack, chatUser, onlineStatus, lastSeen, isTyping, onToggleSearch }) => {

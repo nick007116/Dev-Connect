@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Monitor, Users, Share, Eye, Wifi, AlertCircle, Maximize, Minimize, X, UserX, Check, Settings, Shield, Info } from 'lucide-react';
+import { Monitor, Users, Share, Eye, Wifi, AlertCircle, Maximize, Minimize, X, UserX, Check, Shield } from 'lucide-react';
 import { useSocket } from '../../hooks/useSocket';
 import { useWebRTC } from '../../hooks/useWebRTC';
 
@@ -48,7 +48,8 @@ const RemoteDesktopShare = ({ user }) => {
     const checkNetworkQuality = async () => {
       try {
         const startTime = Date.now();
-        await fetch('/api/health', { method: 'HEAD' });
+        const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+        await fetch(`${backendUrl}/api/health`, { method: 'HEAD' });
         const latency = Date.now() - startTime;
         
         if (latency < 50) setNetworkQuality('excellent');
@@ -64,33 +65,6 @@ const RemoteDesktopShare = ({ user }) => {
     const interval = setInterval(checkNetworkQuality, 30000);
     return () => clearInterval(interval);
   }, []);
-
-  // Session persistence
-  useEffect(() => {
-    const savedSessionId = localStorage.getItem('activeSessionId');
-    const savedRole = localStorage.getItem('sessionRole');
-    
-    if (savedSessionId && user?.uid && socket) {
-      socket.emit('get_session_info', { sessionId: savedSessionId });
-      
-      const handleSessionInfo = (data) => {
-        if (data.success) {
-          setJoinSessionId(savedSessionId);
-          if (savedRole === 'host') {
-            handleStartScreenShare();
-          } else {
-            handleJoinSession();
-          }
-        } else {
-          localStorage.removeItem('activeSessionId');
-          localStorage.removeItem('sessionRole');
-        }
-        socket.off('session_info', handleSessionInfo);
-      };
-      
-      socket.on('session_info', handleSessionInfo);
-    }
-  }, [user?.uid, socket]);
 
   // Save session info
   useEffect(() => {
@@ -110,11 +84,26 @@ const RemoteDesktopShare = ({ user }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Quality constraints based on network
+  const getQualityConstraints = useCallback(() => {
+    switch (networkQuality) {
+      case 'excellent':
+        return { width: 1920, height: 1080, frameRate: 60 };
+      case 'good':
+        return { width: 1280, height: 720, frameRate: 30 };
+      case 'fair':
+        return { width: 854, height: 480, frameRate: 24 };
+      case 'poor':
+        return { width: 640, height: 360, frameRate: 15 };
+      default:
+        return { width: 1280, height: 720, frameRate: 30 };
+    }
+  }, [networkQuality]);
+
   // Remote stream handling with quality optimization
   useEffect(() => {
     if (!isHost && remoteStreams && remoteStreams.size > 0 && remoteVideoRef.current) {
-      const firstStreamEntry = Array.from(remoteStreams.entries())[0];
-      const [streamId, stream] = firstStreamEntry;
+      const stream = remoteStreams.values().next().value;
       
       if (stream && stream.active && stream.getTracks().length > 0) {
         const videoElement = remoteVideoRef.current;
@@ -155,23 +144,7 @@ const RemoteDesktopShare = ({ user }) => {
     } else if (!isHost && remoteVideoRef.current && (!remoteStreams || remoteStreams.size === 0)) {
       remoteVideoRef.current.srcObject = null;
     }
-  }, [isHost, remoteStreams, isConnected, currentSessionId, networkQuality]);
-
-  // Quality constraints based on network
-  const getQualityConstraints = useCallback(() => {
-    switch (networkQuality) {
-      case 'excellent':
-        return { width: 1920, height: 1080, frameRate: 60 };
-      case 'good':
-        return { width: 1280, height: 720, frameRate: 30 };
-      case 'fair':
-        return { width: 854, height: 480, frameRate: 24 };
-      case 'poor':
-        return { width: 640, height: 360, frameRate: 15 };
-      default:
-        return { width: 1280, height: 720, frameRate: 30 };
-    }
-  }, [networkQuality]);
+  }, [isHost, remoteStreams, getQualityConstraints]);
 
   // Copy session ID
   const handleCopySessionId = useCallback(async () => {
@@ -227,17 +200,117 @@ const RemoteDesktopShare = ({ user }) => {
     }
   }, [joinAsViewer, socket]);
 
+  const handleStartScreenShare = useCallback(async () => {
+    try {
+      setError(null);
+      setIsLoading(true);
+
+      const newSessionId = `RDS-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+      if (!socket || !user?.uid) {
+        throw new Error('Authentication required');
+      }
+
+      setSessionId(newSessionId);
+
+      socket.emit('create_remote_session', {
+        userId: user.uid,
+        sessionId: newSessionId,
+        quality: getQualityConstraints()
+      });
+
+    } catch (error) {
+      setError('Failed to start screen sharing: ' + error.message);
+      setIsLoading(false);
+    }
+  }, [getQualityConstraints, socket, user?.uid]);
+
+  const handleJoinSession = useCallback(async (requestedSessionId) => {
+    const sessionToJoin = (
+      typeof requestedSessionId === 'string' ? requestedSessionId : joinSessionId
+    ).trim();
+    if (!sessionToJoin || !socket) return;
+
+    try {
+      setError(null);
+      setIsLoading(true);
+
+      setSessionId(sessionToJoin);
+
+      socket.emit('join_remote_session', {
+        sessionId: sessionToJoin,
+        userId: user.uid
+      });
+
+    } catch (error) {
+      setError('Failed to join session: ' + error.message);
+      setIsLoading(false);
+    }
+  }, [joinSessionId, socket, user?.uid]);
+
+  const handleEndSession = useCallback(() => {
+    try {
+      if (activeSession) {
+        if (isHost) {
+          socket?.emit('end_remote_session', { sessionId: activeSession.id });
+        }
+      }
+
+      stopScreenShare();
+      setActiveSession(null);
+      setConnectedUsers([]);
+      setError(null);
+
+      localStorage.removeItem('activeSessionId');
+      localStorage.removeItem('sessionRole');
+
+      if (isFullscreen) {
+        document.exitFullscreen();
+        setIsFullscreen(false);
+      }
+    } catch (error) {
+      console.error('Error ending session:', error);
+    }
+  }, [activeSession, socket, stopScreenShare, isFullscreen, isHost]);
+
+  // Restore the previously active session once its handlers are ready.
+  useEffect(() => {
+    if (!user?.uid || !socket) return undefined;
+
+    const savedSessionId = localStorage.getItem('activeSessionId');
+    const savedRole = localStorage.getItem('sessionRole');
+    if (!savedSessionId) return undefined;
+
+    const handleSessionInfo = (data) => {
+      if (data.success) {
+        setJoinSessionId(savedSessionId);
+        if (savedRole === 'host') {
+          handleStartScreenShare();
+        } else {
+          handleJoinSession(savedSessionId);
+        }
+      } else {
+        localStorage.removeItem('activeSessionId');
+        localStorage.removeItem('sessionRole');
+      }
+      socket.off('session_info', handleSessionInfo);
+    };
+
+    socket.on('session_info', handleSessionInfo);
+    socket.emit('get_session_info', { sessionId: savedSessionId });
+    return () => socket.off('session_info', handleSessionInfo);
+  }, [user?.uid, socket, handleStartScreenShare, handleJoinSession]);
+
   // Socket event listeners
   useEffect(() => {
-    if (!socket) return;
+    if (!socket) return undefined;
 
     const handleUserJoined = (data) => {
       setConnectedUsers(prev => {
-        // Check if user already exists
         if (prev.find(user => user.id === data.userId)) {
           return prev;
         }
-        
+
         return [...prev, {
           id: data.userId,
           name: data.userName || `User ${data.userId.slice(-4)}`,
@@ -258,16 +331,13 @@ const RemoteDesktopShare = ({ user }) => {
       }
     };
 
-    const handleUserRemoved = (data) => {
+    const handleUserRemoved = () => {
       setError('You have been removed from the session by the host');
       handleEndSession();
     };
 
     const handleUserRemoveSuccess = (data) => {
-      // Remove user from local state immediately
       setConnectedUsers(prev => prev.filter(user => user.id !== data.userId));
-      
-      // Show user removal success message (NOT copied message)
       setRemovedUserName(data.userName || 'User');
       setShowRemovalSuccess(true);
       setTimeout(() => setShowRemovalSuccess(false), 3000);
@@ -302,78 +372,7 @@ const RemoteDesktopShare = ({ user }) => {
       socket.off('session_ended', handleSessionEnded);
       socket.off('session_error', handleSessionError);
     };
-  }, [socket, handleSessionCreated, handleSessionJoined, isHost]);
-
-  const handleStartScreenShare = async () => {
-    try {
-      setError(null);
-      setIsLoading(true);
-      
-      const newSessionId = `RDS-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      
-      if (!socket || !user?.uid) {
-        throw new Error('Authentication required');
-      }
-
-      setSessionId(newSessionId);
-
-      socket.emit('create_remote_session', {
-        userId: user.uid,
-        sessionId: newSessionId,
-        quality: getQualityConstraints()
-      });
-
-    } catch (error) {
-      setError('Failed to start screen sharing: ' + error.message);
-      setIsLoading(false);
-    }
-  };
-
-  const handleJoinSession = async () => {
-    const sessionToJoin = joinSessionId.trim();
-    if (!sessionToJoin || !socket) return;
-    
-    try {
-      setError(null);
-      setIsLoading(true);
-      
-      setSessionId(sessionToJoin);
-      
-      socket.emit('join_remote_session', {
-        sessionId: sessionToJoin,
-        userId: user.uid
-      });
-      
-    } catch (error) {
-      setError('Failed to join session: ' + error.message);
-      setIsLoading(false);
-    }
-  };
-
-  const handleEndSession = useCallback(() => {
-    try {
-      if (activeSession) {
-        if (isHost) {
-          socket?.emit('end_remote_session', { sessionId: activeSession.id });
-        }
-      }
-
-      stopScreenShare();
-      setActiveSession(null);
-      setConnectedUsers([]);
-      setError(null);
-      
-      localStorage.removeItem('activeSessionId');
-      localStorage.removeItem('sessionRole');
-      
-      if (isFullscreen) {
-        document.exitFullscreen();
-        setIsFullscreen(false);
-      }
-    } catch (error) {
-      console.error('Error ending session:', error);
-    }
-  }, [activeSession, socket, stopScreenShare, isFullscreen, isHost]);
+  }, [socket, handleSessionCreated, handleSessionJoined, isHost, handleEndSession]);
 
   const handleRemoveUser = (userIdToRemove) => {
     if (isHost && socket && activeSession) {

@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 
 const SmartLearningHub = ({ user }) => {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [userProgress, setUserProgress] = useState({
+  const [userProgress] = useState({
     level: 12,
     xp: 2840,
     nextLevelXp: 3000,

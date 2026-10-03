@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signInAnonymously, signOut } from "firebase/auth";
 import { 
   getFirestore, 
   doc, 
@@ -26,6 +26,7 @@ const firebaseConfig = {
     apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
     authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
     projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+    databaseURL: process.env.REACT_APP_FIREBASE_DATABASE_URL,
     storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
     messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
     appId: process.env.REACT_APP_FIREBASE_APP_ID,
@@ -38,7 +39,7 @@ const db = getFirestore(app);
 const rtdb = getDatabase(app); // Get Realtime Database instance
 
 export { 
-  auth, db, rtdb, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, 
+  auth, db, rtdb, GoogleAuthProvider, signInWithPopup, signInAnonymously, signOut, onAuthStateChanged,
   doc, getDoc, setDoc, collection, addDoc, query, onSnapshot, orderBy, 
   where, getDocs, updateDoc, limit, startAfter, serverTimestamp, deleteDoc, 
   ref, onValue, set, onDisconnect, remove, arrayUnion, arrayRemove

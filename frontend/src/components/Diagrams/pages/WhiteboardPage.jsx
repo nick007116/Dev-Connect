@@ -4,7 +4,7 @@ import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../../lib/firebase';
 import { useAuth } from '../../../hooks/useAuth';
 import WhiteboardEditor from '../Diagram/WhiteboardEditor';
-import { ArrowLeft, AlertCircle, Loader2, Grid, Users, Clock, Save } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Grid } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const LoadingScreen = () => (
